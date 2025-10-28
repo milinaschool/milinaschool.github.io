@@ -711,6 +711,15 @@
         }
 
         @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.1em;
+            }
+            
+            .btn-secondary {
+                font-size: 0.85em;
+                padding: 8px 12px;
+            }
+            
             .practice-layout {
                 grid-template-columns: 1fr;
             }
@@ -907,6 +916,26 @@
                         <input type="file" id="dbImportFile" accept=".json" onchange="importDatabase(event)">
                         <button class="btn-secondary" onclick="document.getElementById('dbImportFile').click()">DB 가져오기</button>
                     </div>
+                </div>
+            </div>
+            
+            <!-- 프리셋 관리 섹션 -->
+            <div class="management-section">
+                <div class="management-header">
+                    <h3>⭐ 프리셋 관리</h3>
+                    <p>현재 질문 데이터베이스를 프리셋으로 저장하고 불러올 수 있습니다. 프리셋은 브라우저에 저장됩니다.</p>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;">
+                    <select id="presetSelect" style="flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #d8d4cf; border-radius: 6px; font-size: 0.95em;">
+                        <option value="">프리셋 선택...</option>
+                    </select>
+                    <button class="btn-primary btn-small" onclick="loadPreset()">불러오기</button>
+                    <button class="btn-secondary btn-small" onclick="saveAsPreset()">현재 DB를 프리셋으로 저장</button>
+                    <button class="btn-secondary btn-small" onclick="renamePreset()">이름 변경</button>
+                    <button class="btn-danger btn-small" onclick="deletePreset()">삭제</button>
+                </div>
+                <div id="presetList" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">
+                    <!-- 프리셋 목록이 여기에 표시됩니다 -->
                 </div>
             </div>
             
@@ -1108,6 +1137,7 @@
     let seconds = 0;
     let editingQuestionId = null;
     let koreanVoice = null; // TTS 목소리 저장 변수
+    let presets = []; // 프리셋 저장 배열
 
     // 집중 모드 관련 전역 변수
     let isInFocusMode = false;
@@ -1118,6 +1148,7 @@
     function init() {
         loadKoreanVoice(); // 자연스러운 한국어 목소리 로드
         loadDataFromStorage();
+        loadPresetsFromStorage(); // 프리셋 로드
         updateAllUIs();
         updateAnswerList();
         initSpeechRecognition();
@@ -1457,19 +1488,22 @@
                 recognition.lang = 'ko-KR';
                 recognition.maxAlternatives = 1;
                 let finalTranscript = '';
+                let lastFinalResultIndex = 0;
 
                 recognition.onstart = () => {
                     finalTranscript = document.getElementById('transcriptionText').value;
                      if (finalTranscript.length > 0 && !finalTranscript.endsWith(' ')) finalTranscript += ' ';
+                    lastFinalResultIndex = 0;
                     showRecognitionStatus('음성 인식 활성화 - 말씀해주세요', '#7c9473', '●');
                 };
 
                 recognition.onresult = (event) => {
                     let interimTranscript = '';
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                    for (let i = lastFinalResultIndex; i < event.results.length; i++) {
                         const transcript = event.results[i][0].transcript;
                         if (event.results[i].isFinal) {
                             finalTranscript += transcript + ' ';
+                            lastFinalResultIndex = i + 1;
                         } else {
                             interimTranscript += transcript;
                         }
@@ -1898,8 +1932,121 @@
         }
     });
 
+    // --- 프리셋 관리 함수들 ---
+    function loadPresetsFromStorage() {
+        const saved = localStorage.getItem('interviewPresets');
+        presets = saved ? JSON.parse(saved) : [];
+        updatePresetUI();
+    }
+
+    function savePresetsToStorage() {
+        localStorage.setItem('interviewPresets', JSON.stringify(presets));
+        updatePresetUI();
+    }
+
+    function updatePresetUI() {
+        const select = document.getElementById('presetSelect');
+        const list = document.getElementById('presetList');
+        
+        // 셀렉트 박스 업데이트
+        select.innerHTML = '<option value="">프리셋 선택...</option>';
+        presets.forEach((preset, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = preset.name;
+            select.appendChild(option);
+        });
+        
+        // 프리셋 목록 표시
+        if (presets.length === 0) {
+            list.innerHTML = '<div style="color: #6b7280; font-size: 0.9em;">저장된 프리셋이 없습니다.</div>';
+        } else {
+            list.innerHTML = presets.map((preset, index) => 
+                `<span style="background: #e8e5e0; padding: 6px 12px; border-radius: 6px; font-size: 0.9em; cursor: pointer;" 
+                       onclick="document.getElementById('presetSelect').value='${index}'">${preset.name}</span>`
+            ).join('');
+        }
+    }
+
+    function saveAsPreset() {
+        const name = prompt('프리셋 이름을 입력하세요:');
+        if (!name || name.trim() === '') return;
+        
+        const preset = {
+            name: name.trim(),
+            categories: JSON.parse(JSON.stringify(categories)),
+            questions: JSON.parse(JSON.stringify(questions)),
+            timestamp: new Date().toISOString()
+        };
+        
+        presets.push(preset);
+        savePresetsToStorage();
+        showStatus(`프리셋 '${name}'이(가) 저장되었습니다.`, 'success');
+    }
+
+    function loadPreset() {
+        const select = document.getElementById('presetSelect');
+        const index = select.value;
+        
+        if (index === '') {
+            showStatus('프리셋을 선택해주세요.', 'error');
+            return;
+        }
+        
+        if (!confirm('현재 데이터베이스를 선택한 프리셋으로 교체하시겠습니까? (현재 데이터는 손실됩니다)')) {
+            return;
+        }
+        
+        const preset = presets[index];
+        categories = JSON.parse(JSON.stringify(preset.categories));
+        questions = JSON.parse(JSON.stringify(preset.questions));
+        
+        saveDataToStorage();
+        updateCategorySelectors();
+        updateAllUIs();
+        showStatus(`프리셋 '${preset.name}'을(를) 불러왔습니다.`, 'success');
+    }
+
+    function deletePreset() {
+        const select = document.getElementById('presetSelect');
+        const index = select.value;
+        
+        if (index === '') {
+            showStatus('삭제할 프리셋을 선택해주세요.', 'error');
+            return;
+        }
+        
+        const preset = presets[index];
+        if (!confirm(`프리셋 '${preset.name}'을(를) 삭제하시겠습니까?`)) {
+            return;
+        }
+        
+        presets.splice(index, 1);
+        savePresetsToStorage();
+        showStatus('프리셋이 삭제되었습니다.', 'info');
+    }
+
+    function renamePreset() {
+        const select = document.getElementById('presetSelect');
+        const index = select.value;
+        
+        if (index === '') {
+            showStatus('이름을 변경할 프리셋을 선택해주세요.', 'error');
+            return;
+        }
+        
+        const preset = presets[index];
+        const newName = prompt('새 이름을 입력하세요:', preset.name);
+        
+        if (!newName || newName.trim() === '') return;
+        
+        preset.name = newName.trim();
+        savePresetsToStorage();
+        showStatus('프리셋 이름이 변경되었습니다.', 'success');
+    }
+
     document.addEventListener('DOMContentLoaded', init);
     document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); }));
 </script>
 </body>
-</html>
+</html>z
