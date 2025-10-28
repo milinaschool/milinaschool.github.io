@@ -241,6 +241,61 @@
              line-height: 1;
         }
 
+        /* 토글 스위치 스타일 */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #f5f3f0;
+            border-radius: 6px;
+            border: 1px solid #e8e5e0;
+        }
+
+        .toggle-label {
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.95em;
+            flex: 1;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 24px;
+            background: #d8d4cf;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #7c9473;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(24px);
+        }
+
+        .toggle-description {
+            font-size: 0.85em;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
 
         .timer {
             background: #f5e6d3;
@@ -976,6 +1031,17 @@
                     </div>
                 </div>
 
+                <!-- 녹음 기능 토글 -->
+                <div class="toggle-container">
+                    <div style="flex: 1;">
+                        <div class="toggle-label">🎙️ 음성 녹음 기능</div>
+                        <div class="toggle-description">활성화하면 답변 시 음성이 녹음되어 다운로드할 수 있습니다.</div>
+                    </div>
+                    <div class="toggle-switch" id="audioRecordingToggle" onclick="toggleAudioRecording()">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
                 <div class="search-box">
                     <input type="text" id="answerSearch" placeholder="답변 검색..." oninput="filterAnswers()">
                 </div>
@@ -1144,11 +1210,19 @@
     let focusState = 'idle'; // idle -> waiting -> listening -> processing
     const FOCUS_DELAY = 500;
 
+    // 음성 녹음 관련 전역 변수
+    let audioRecordingEnabled = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let currentAudioBlob = null;
+    let audioStream = null;
+
     // 초기화
     function init() {
         loadKoreanVoice(); // 자연스러운 한국어 목소리 로드
         loadDataFromStorage();
         loadPresetsFromStorage(); // 프리셋 로드
+        loadAudioRecordingState(); // 음성 녹음 상태 로드
         updateAllUIs();
         updateAnswerList();
         initSpeechRecognition();
@@ -1578,6 +1652,12 @@
         try {
             recognition.start();
             isRecording = true;
+            
+            // 음성 녹음 기능이 활성화된 경우 오디오 녹음 시작
+            if (audioRecordingEnabled) {
+                startAudioRecording();
+            }
+            
             if (!isInFocusMode) {
                 document.getElementById('recordBtn').textContent = '녹음 중지';
                 document.getElementById('recordBtn').classList.add('recording');
@@ -1597,6 +1677,12 @@
         } else {
             isRecording = false;
         }
+        
+        // 음성 녹음 중지
+        if (audioRecordingEnabled && mediaRecorder && mediaRecorder.state !== 'inactive') {
+            stopAudioRecording();
+        }
+        
         if (!isInFocusMode) {
             document.getElementById('recordBtn').textContent = '녹음 시작';
             document.getElementById('recordBtn').classList.remove('recording');
@@ -1604,6 +1690,109 @@
             if (document.getElementById('transcriptionText').value.trim()) {
                 showStatus('녹음이 중지되었습니다. 답변을 확인하고 저장하세요.', 'success');
             }
+        }
+    }
+
+    // --- 음성 녹음 기능 관련 함수들 ---
+    function loadAudioRecordingState() {
+        const saved = localStorage.getItem('audioRecordingEnabled');
+        audioRecordingEnabled = saved === 'true';
+        updateAudioRecordingToggle();
+    }
+
+    function toggleAudioRecording() {
+        audioRecordingEnabled = !audioRecordingEnabled;
+        localStorage.setItem('audioRecordingEnabled', audioRecordingEnabled.toString());
+        updateAudioRecordingToggle();
+        showStatus(audioRecordingEnabled ? '음성 녹음 기능이 활성화되었습니다.' : '음성 녹음 기능이 비활성화되었습니다.', 'success');
+    }
+
+    function updateAudioRecordingToggle() {
+        const toggle = document.getElementById('audioRecordingToggle');
+        if (toggle) {
+            if (audioRecordingEnabled) {
+                toggle.classList.add('active');
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
+    }
+
+    async function startAudioRecording() {
+        try {
+            audioChunks = [];
+            currentAudioBlob = null;
+            
+            // 오디오 스트림 가져오기
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // MediaRecorder 생성
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+            mediaRecorder = new MediaRecorder(audioStream, { mimeType });
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+            
+            mediaRecorder.onstop = () => {
+                currentAudioBlob = new Blob(audioChunks, { type: mimeType });
+                audioChunks = [];
+                
+                // 스트림 정리
+                if (audioStream) {
+                    audioStream.getTracks().forEach(track => track.stop());
+                    audioStream = null;
+                }
+            };
+            
+            mediaRecorder.start();
+        } catch (error) {
+            console.error('Audio recording error:', error);
+            showStatus('오디오 녹음을 시작할 수 없습니다. 마이크 권한을 확인하세요.', 'error');
+        }
+    }
+
+    function stopAudioRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+    }
+
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    function downloadAudio(audioData, timestamp) {
+        try {
+            // Base64 데이터를 Blob으로 변환
+            const byteString = atob(audioData.split(',')[1]);
+            const mimeString = audioData.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            const blob = new Blob([ab], { type: mimeString });
+            
+            // 다운로드 링크 생성
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `answer_${timestamp}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Download error:', error);
+            showStatus('오디오 다운로드 중 오류가 발생했습니다.', 'error');
         }
     }
 
@@ -1676,7 +1865,7 @@
         return returnName ? '기타' : 'unknown';
     }
 
-    function saveAnswer() {
+    async function saveAnswer() {
         const transcription = document.getElementById('transcriptionText').value.trim();
         if (!currentQuestion) {
             if (!isInFocusMode) showStatus('질문을 먼저 선택해주세요.', 'error');
@@ -1686,14 +1875,27 @@
             if (!isInFocusMode) showStatus('답변 내용이 비어있습니다.', 'error');
             return;
         }
+        
+        // 오디오 데이터 처리
+        let audioData = null;
+        if (audioRecordingEnabled && currentAudioBlob) {
+            try {
+                audioData = await blobToBase64(currentAudioBlob);
+            } catch (error) {
+                console.error('Failed to convert audio:', error);
+            }
+        }
+        
         const answer = {
             id: Date.now(),
             question: currentQuestion,
             answer: transcription,
             duration: seconds,
             timestamp: new Date().toISOString(),
-            category: getQuestionCategory(currentQuestion, true)
+            category: getQuestionCategory(currentQuestion, true),
+            audioData: audioData // 오디오 데이터 추가
         };
+        
         answers.unshift(answer);
         saveAnswersToStorage();
         updateAllUIs();
@@ -1702,6 +1904,9 @@
         }
         clearTranscription();
         resetTimer();
+        
+        // 오디오 데이터 정리
+        currentAudioBlob = null;
     }
 
     function clearTranscription() { document.getElementById('transcriptionText').value = ''; }
@@ -1729,14 +1934,22 @@
             container.innerHTML = '<div class="empty-state"><p>저장된 답변이 없습니다.</p></div>';
             return;
         }
-        container.innerHTML = filtered.map(answer => `
+        container.innerHTML = filtered.map(answer => {
+            const audioButton = answer.audioData 
+                ? `<button class="btn-secondary btn-small" onclick="downloadAudio('${answer.audioData.replace(/'/g, "\\'")}', '${answer.timestamp}')">🎙️ 녹음 다운로드</button>` 
+                : '';
+            return `
             <div class="answer-card">
                 <div class="answer-question">${answer.question}</div>
                 <div class="answer-meta">카테고리: ${answer.category} | 시간: ${Math.floor(answer.duration / 60)}분 ${answer.duration % 60}초 | ${new Date(answer.timestamp).toLocaleString('ko-KR')}</div>
                 <div class="answer-text">${answer.answer.replace(/\n/g, '<br>')}</div>
-                <div class="answer-actions"><button class="btn-danger btn-small" onclick="deleteAnswer(${answer.id})">삭제</button></div>
+                <div class="answer-actions">
+                    ${audioButton}
+                    <button class="btn-danger btn-small" onclick="deleteAnswer(${answer.id})">삭제</button>
+                </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function filterAnswers() { updateAnswerList(); }
@@ -2049,4 +2262,4 @@
     document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); }));
 </script>
 </body>
-</html>z
+</html>
