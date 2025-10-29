@@ -241,6 +241,20 @@
              line-height: 1;
         }
 
+        .btn-focus-mode {
+            background: #3a3a3a;
+            color: #ffffff;
+            border: 1px solid #5a5a5a;
+            padding: 10px 24px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-focus-mode:hover {
+            background: #404040;
+        }
+
         /* 토글 스위치 스타일 */
         .toggle-container {
             display: flex;
@@ -1181,6 +1195,17 @@
                     </div>
                 </div>
 
+                <!-- 오디오 저장 안내 -->
+                <div id="audioStorageNotice" class="warning-box" style="background: #e8f0f5; border-color: #c5dae8; color: #2c5f7a; display: none; margin: 0 0 20px 0;">
+                    <div style="font-weight: 600; margin-bottom: 8px;">ℹ️ 오디오 저장 안내</div>
+                    <div style="font-size: 0.95em; line-height: 1.6;">
+                        이 프로그램은 브라우저 저장소(IndexedDB)를 사용하여 음성 녹음을 저장합니다. 
+                        저장 공간 관리를 위해 최대 <code>50개</code>의 오디오 파일만 보관되며, 
+                        이 숫자를 초과하면 가장 오래된 녹음부터 자동으로 삭제됩니다. 
+                        답변 텍스트는 계속 유지되며, 오디오 파일만 제거됩니다.
+                    </div>
+                </div>
+
                 <div class="search-box">
                     <input type="text" id="answerSearch" placeholder="답변 검색..." oninput="filterAnswers()">
                 </div>
@@ -1359,8 +1384,109 @@
         let currentAudioBlob = null;
         let audioStream = null;
 
+        // IndexedDB 관련 상수 및 변수
+        const MAX_AUDIO_FILES = 50; // 최대 저장 가능한 오디오 파일 수
+        const DB_NAME = 'InterviewAudioDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'audioFiles';
+        let audioDB = null;
+
+        // IndexedDB 헬퍼 함수
+        function initAudioDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    audioDB = request.result;
+                    resolve(audioDB);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        async function saveAudioToIndexedDB(id, blob) {
+            if (!audioDB) await initAudioDB();
+            return new Promise((resolve, reject) => {
+                const transaction = audioDB.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put({ id: id, blob: blob, timestamp: Date.now() });
+                
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function getAudioFromIndexedDB(id) {
+            if (!audioDB) await initAudioDB();
+            return new Promise((resolve, reject) => {
+                const transaction = audioDB.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(id);
+                
+                request.onsuccess = () => {
+                    if (request.result && request.result.blob) {
+                        resolve(request.result.blob);
+                    } else {
+                        resolve(null);
+                    }
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function deleteAudioFromIndexedDB(id) {
+            if (!audioDB) await initAudioDB();
+            return new Promise((resolve, reject) => {
+                const transaction = audioDB.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(id);
+                
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function getAllAudioIdsFromIndexedDB() {
+            if (!audioDB) await initAudioDB();
+            return new Promise((resolve, reject) => {
+                const transaction = audioDB.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAllKeys();
+                
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function cleanupOldAudioFiles() {
+            // answers 배열에서 오디오가 있는 답변들을 시간순으로 정렬
+            const answersWithAudio = answers.filter(a => a.hasAudio).sort((a, b) => a.id - b.id);
+            
+            // 최대 개수를 초과하는 경우 오래된 오디오 삭제
+            if (answersWithAudio.length > MAX_AUDIO_FILES) {
+                const toDelete = answersWithAudio.slice(0, answersWithAudio.length - MAX_AUDIO_FILES);
+                for (const answer of toDelete) {
+                    try {
+                        await deleteAudioFromIndexedDB(answer.id);
+                        answer.hasAudio = false;
+                    } catch (error) {
+                        console.error('Failed to delete old audio:', error);
+                    }
+                }
+                saveAnswersToStorage();
+            }
+        }
+
         // 초기화
-        function init() {
+        async function init() {
+            await initAudioDB();
             loadInitialData();
             loadAnswersFromStorage();
             loadAudioRecordingState();
@@ -1375,7 +1501,7 @@
 
         function createFocusModeButton() {
             const focusModeBtn = document.createElement('button');
-            focusModeBtn.className = 'btn-secondary';
+            focusModeBtn.className = 'btn-focus-mode';
             focusModeBtn.textContent = '집중 모드';
             focusModeBtn.onclick = enterFocusMode;
             document.querySelector('.header').appendChild(focusModeBtn);
@@ -1457,6 +1583,20 @@
         function loadAnswersFromStorage() {
             const storedAnswers = localStorage.getItem('interviewAnswers');
             answers = storedAnswers ? JSON.parse(storedAnswers) : [];
+            
+            // 기존 audioData 형식을 hasAudio로 변환 (마이그레이션)
+            let needsSave = false;
+            for (const answer of answers) {
+                if (answer.audioData !== undefined) {
+                    // 기존 형식: audioData가 있음
+                    answer.hasAudio = !!answer.audioData;
+                    delete answer.audioData;
+                    needsSave = true;
+                }
+            }
+            if (needsSave) {
+                saveAnswersToStorage();
+            }
         }
         function saveAnswersToStorage() { localStorage.setItem('interviewAnswers', JSON.stringify(answers)); }
 
@@ -1838,9 +1978,15 @@
 
         function updateAudioRecordingToggle() {
             const toggle = document.getElementById('audioRecordingToggle');
+            const notice = document.getElementById('audioStorageNotice');
             if (toggle) {
-                if (audioRecordingEnabled) toggle.classList.add('active');
-                else toggle.classList.remove('active');
+                if (audioRecordingEnabled) {
+                    toggle.classList.add('active');
+                    if (notice) notice.style.display = 'block';
+                } else {
+                    toggle.classList.remove('active');
+                    if (notice) notice.style.display = 'none';
+                }
             }
         }
 
@@ -1941,6 +2087,53 @@
             buttonElement.onclick = () => pauseAudio(audio, buttonElement, audioData);
         }
 
+        async function playAudioFromDB(answerId, buttonElement) {
+            try {
+                buttonElement.disabled = true;
+                buttonElement.textContent = '⏳ 로딩...';
+                
+                const blob = await getAudioFromIndexedDB(answerId);
+                if (!blob) {
+                    showStatus('오디오 파일을 찾을 수 없습니다.', 'error');
+                    buttonElement.disabled = false;
+                    buttonElement.textContent = '▶️ 재생';
+                    return;
+                }
+                
+                const audioData = await blobToBase64(blob);
+                buttonElement.disabled = false;
+                buttonElement.textContent = '▶️ 재생';
+                playAudio(audioData, buttonElement);
+            } catch (error) {
+                console.error('Failed to play audio from DB:', error);
+                showStatus('오디오 재생 중 오류가 발생했습니다.', 'error');
+                buttonElement.disabled = false;
+                buttonElement.textContent = '▶️ 재생';
+            }
+        }
+
+        async function downloadAudioFromDB(answerId, timestamp) {
+            try {
+                const blob = await getAudioFromIndexedDB(answerId);
+                if (!blob) {
+                    showStatus('오디오 파일을 찾을 수 없습니다.', 'error');
+                    return;
+                }
+                
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `answer_${timestamp}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Download error:', error);
+                showStatus('오디오 다운로드 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
         // --- 기타 유틸리티 함수 ---
         function switchTab(tabName) {
             document.querySelectorAll('.tab.active, .tab-content.active').forEach(el => el.classList.remove('active'));
@@ -2031,24 +2224,35 @@
                 return;
             }
             
-            let audioData = null;
+            const answerId = Date.now();
+            let hasAudio = false;
+            
             if (audioRecordingEnabled && currentAudioBlob) {
-                try { audioData = await blobToBase64(currentAudioBlob); } 
-                catch (error) { console.error('Failed to convert audio:', error); }
+                try {
+                    await saveAudioToIndexedDB(answerId, currentAudioBlob);
+                    hasAudio = true;
+                } catch (error) {
+                    console.error('Failed to save audio to IndexedDB:', error);
+                    if (!isInFocusMode) showStatus('오디오 저장 중 오류가 발생했지만 답변은 저장되었습니다.', 'info');
+                }
             }
             
             const answer = {
-                id: Date.now(),
+                id: answerId,
                 question: currentQuestion,
                 answer: transcription,
                 duration: seconds,
                 timestamp: new Date().toISOString(),
                 category: getQuestionCategory(currentQuestion, true),
-                audioData: audioData
+                hasAudio: hasAudio
             };
             
             answers.unshift(answer);
             saveAnswersToStorage();
+            
+            // 오디오 파일 자동 정리
+            await cleanupOldAudioFiles();
+            
             updateAllUIs();
             if (!isInFocusMode) showStatus('답변이 저장되었습니다!', 'success');
             clearTranscription();
@@ -2083,9 +2287,9 @@
                 return;
             }
             container.innerHTML = filtered.map((answer, index) => {
-                const audioButtons = answer.audioData 
-                    ? `<button class="btn-secondary btn-small" id="playBtn_${index}" onclick="playAudio('${answer.audioData.replace(/'/g, "\\'")}', this)">▶️ 재생</button>
-                    <button class="btn-secondary btn-small" onclick="downloadAudio('${answer.audioData.replace(/'/g, "\\'")}', '${answer.timestamp}')">💾 다운로드</button>` 
+                const audioButtons = answer.hasAudio
+                    ? `<button class="btn-secondary btn-small" id="playBtn_${answer.id}" onclick="playAudioFromDB(${answer.id}, this)">▶️ 재생</button>
+                    <button class="btn-secondary btn-small" onclick="downloadAudioFromDB(${answer.id}, '${answer.timestamp}')">💾 다운로드</button>` 
                     : '';
                 return `
                 <div class="answer-card">
@@ -2103,8 +2307,16 @@
 
         function filterAnswers() { updateAnswerList(); }
 
-        function deleteAnswer(id) {
-            showConfirm('이 답변을 삭제하시겠습니까?', () => {
+        async function deleteAnswer(id) {
+            showConfirm('이 답변을 삭제하시겠습니까?', async () => {
+                const answer = answers.find(a => a.id === id);
+                if (answer && answer.hasAudio) {
+                    try {
+                        await deleteAudioFromIndexedDB(id);
+                    } catch (error) {
+                        console.error('Failed to delete audio from IndexedDB:', error);
+                    }
+                }
                 answers = answers.filter(a => a.id !== id);
                 saveAnswersToStorage();
                 updateAnswerList();
@@ -2113,9 +2325,19 @@
             });
         }
 
-        function clearAllAnswers() {
+        async function clearAllAnswers() {
             if (answers.length > 0) {
-                showConfirm('모든 답변 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.', () => {
+                showConfirm('모든 답변 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.', async () => {
+                    // 모든 오디오 파일 삭제
+                    for (const answer of answers) {
+                        if (answer.hasAudio) {
+                            try {
+                                await deleteAudioFromIndexedDB(answer.id);
+                            } catch (error) {
+                                console.error('Failed to delete audio from IndexedDB:', error);
+                            }
+                        }
+                    }
                     answers = [];
                     saveAnswersToStorage();
                     updateAnswerList();
@@ -2130,14 +2352,16 @@
                 showStatus('내보낼 답변이 없습니다.', 'error');
                 return;
             }
-            const dataStr = JSON.stringify(answers, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `interview-answers-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+            showConfirm('답변 텍스트만 내보내집니다. 오디오 파일은 포함되지 않습니다. 계속하시겠습니까?', () => {
+                const dataStr = JSON.stringify(answers, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `interview-answers-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
         }
 
         function importAnswers(event) {
@@ -2148,6 +2372,14 @@
                 try {
                     const imported = JSON.parse(e.target.result);
                     if (!Array.isArray(imported)) throw new Error("Invalid format");
+
+                    // 기존 audioData 형식을 hasAudio로 변환 (마이그레이션)
+                    for (const answer of imported) {
+                        if (answer.audioData !== undefined) {
+                            answer.hasAudio = false; // 가져온 데이터는 오디오 파일이 없음
+                            delete answer.audioData;
+                        }
+                    }
 
                     showConfirm('기존 답변을 덮어쓰시겠습니까? (취소하면 기존 답변에 추가됩니다)', 
                         () => { // 확인
@@ -2163,7 +2395,7 @@
                         saveAnswersToStorage();
                         updateAnswerList();
                         updateAllUIs();
-                        showStatus(`${imported.length}개의 답변을 가져왔습니다.`, 'success');
+                        showStatus(`${imported.length}개의 답변을 가져왔습니다. (오디오 파일은 포함되지 않음)`, 'info');
                     }
                 } catch (error) { showStatus('파일을 읽는 중 오류가 발생했습니다.', 'error'); }
             };
