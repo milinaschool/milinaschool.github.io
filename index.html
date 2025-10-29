@@ -1226,1206 +1226,1208 @@
         <div id="focus-status-text"></div>
     </div>
 
-<script>
-    const defaultData = {
-        categories: {
-            basic: "기본 질문",
-            academic: "학업/탐구",
-            personality: "인성/가치관",
-            department: "학과/진로",
-            technical: "전공 관련"
-        },
-        questions: {
-            basic: [
-                "간단하게 자기소개를 해주세요.",
-                "자신의 장점을 구체적인 사례와 함께 말씀해주세요.",
-                "자신의 단점은 무엇이고, 이를 극복하기 위해 어떤 노력을 하고 있나요?",
-                "본 대학교, 본 학과에 지원한 동기는 무엇인가요?",
-                "마지막으로 하고 싶은 말씀이 있으신가요?",
-            ],
-            academic: [
-                "고등학교에서 가장 열심히 공부한 과목과 그 이유는 무엇인가요?",
-                "학생부에서 가장 인상 깊은 탐구활동을 소개해주세요.",
-                "탐구활동을 하면서 가장 어려웠던 점과 극복 과정을 설명해주세요.",
-                "학업 성적이 낮은 과목이 있다면 그 이유와 개선 노력을 말씀해주세요.",
-                "고교 3년간 가장 의미 있었던 활동(성취)은 무엇인가요? 그 이유는 무엇인가요?",
-                "자신만의 학습 방법이나 시간 관리 노하우가 있나요?"
-            ],
-            personality: [
-                "리더십을 발휘한 경험이 있나요? 구체적으로 설명해주세요.",
-                "팀 프로젝트에서 리더 역할을 맡았던 경험을 구체적으로 설명해주세요.",
-                "리더십과 팔로워십 중 자신은 어느 쪽에 더 가까운가요?",
-                "갈등 상황에서 어떻게 대처하나요? 구체적인 사례를 들어 설명해주세요.",
-                "타인과 의견이 다를 때 어떻게 조율하나요?",
-                "모둠 활동에 제대로 참여하지 않는 친구가 있다면 어떻게 할건가요?",
-                "친구가 어려움에 처했을 때 도와준 경험이 있나요?",
-                "실패한 경험과 그로부터 배운 점을 말씀해주세요.",
-                "지금까지 살아오면서 겪었던 가장 힘들었던 경험은 무엇이고 어떻게 극복했나요?",
-                "스트레스를 받을 때 어떻게 해소하나요?",
-                "새로운 환경에 적응하는 자신만의 방법이 있나요?",
-                "최근에 읽은 책 중 가장 인상 깊었던 책과 그 이유를 말씀해주세요.",
-                "존경하는 인물이 있다면 누구이며, 그 이유는 무엇인가요?",
-                "봉사활동 중 가장 기억에 남는 활동이 있나요?",
-                "가장 중요하게 생각하는 가치관은 무엇인가요?"
-            ],
-            department: [
-                "대학 입학 후 가장 먼저 하고 싶은 일은 무엇인가요?",
-                "입학 후 학업계획을 말해주세요.",
-                "10년 후 자신의 모습은 어떨 것 같나요?",
-                "졸업 후 진로 계획은 어떻게 되나요?",
-                "이 학과에서 가장 듣고 싶은 과목은 무엇인가요?",
-                "이 학과에 지원하기 위해 어떤 노력을 했나요?"
-            ],
-            technical: [],
-        }
-    };
-
-    // 전역 변수
-    let categories = {};
-    let questions = {};
-    let answers = [];
-    let currentQuestion = null;
-    let isRecording = false;
-    let recognition = null;
-    let timerInterval = null;
-    let seconds = 0;
-    let editingQuestionId = null;
-    let koreanVoice = null; // TTS 목소리 저장 변수
-    let presets = []; // 프리셋 저장 배열
-
-    // 집중 모드 관련 전역 변수
-    let isInFocusMode = false;
-    let focusState = 'idle'; // idle -> waiting -> listening -> processing
-    const FOCUS_DELAY = 500;
-
-    // 음성 녹음 관련 전역 변수
-    let audioRecordingEnabled = false;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let currentAudioBlob = null;
-    let audioStream = null;
-
-    // 초기화
-    function init() {
-        loadKoreanVoice(); // 자연스러운 한국어 목소리 로드
-        loadDataFromStorage();
-        loadPresetsFromStorage(); // 프리셋 로드
-        loadAudioRecordingState(); // 음성 녹음 상태 로드
-        updateAllUIs();
-        updateAnswerList();
-        initSpeechRecognition();
-        createFocusModeButton();
-    }
-
-    function createFocusModeButton() {
-        const focusModeBtn = document.createElement('button');
-        focusModeBtn.className = 'btn-secondary';
-        focusModeBtn.textContent = '집중 모드';
-        focusModeBtn.onclick = enterFocusMode;
-        document.querySelector('.header').appendChild(focusModeBtn);
-    }
-    
-    function loadKoreanVoice() {
-        const setVoice = () => {
-            const voices = window.speechSynthesis.getVoices();
-            koreanVoice = voices.find(voice => voice.lang === 'ko-KR' && voice.name.includes('Online')) || 
-                          voices.find(voice => voice.lang === 'ko-KR');
+    <script>
+        const defaultData = {
+            categories: {
+                basic: "기본 질문",
+                academic: "학업/탐구",
+                personality: "인성/가치관",
+                department: "학과/진로",
+                technical: "전공 관련"
+            },
+            questions: {
+                basic: [
+                    "간단하게 자기소개를 해주세요.",
+                    "자신의 장점을 구체적인 사례와 함께 말씀해주세요.",
+                    "자신의 단점은 무엇이고, 이를 극복하기 위해 어떤 노력을 하고 있나요?",
+                    "본 대학교, 본 학과에 지원한 동기는 무엇인가요?",
+                    "마지막으로 하고 싶은 말씀이 있으신가요?",
+                ],
+                academic: [
+                    "고등학교에서 가장 열심히 공부한 과목과 그 이유는 무엇인가요?",
+                    "학생부에서 가장 인상 깊은 탐구활동을 소개해주세요.",
+                    "탐구활동을 하면서 가장 어려웠던 점과 극복 과정을 설명해주세요.",
+                    "학업 성적이 낮은 과목이 있다면 그 이유와 개선 노력을 말씀해주세요.",
+                    "고교 3년간 가장 의미 있었던 활동(성취)은 무엇인가요? 그 이유는 무엇인가요?",
+                    "자신만의 학습 방법이나 시간 관리 노하우가 있나요?"
+                ],
+                personality: [
+                    "리더십을 발휘한 경험이 있나요? 구체적으로 설명해주세요.",
+                    "팀 프로젝트에서 리더 역할을 맡았던 경험을 구체적으로 설명해주세요.",
+                    "리더십과 팔로워십 중 자신은 어느 쪽에 더 가까운가요?",
+                    "갈등 상황에서 어떻게 대처하나요? 구체적인 사례를 들어 설명해주세요.",
+                    "타인과 의견이 다를 때 어떻게 조율하나요?",
+                    "모둠 활동에 제대로 참여하지 않는 친구가 있다면 어떻게 할건가요?",
+                    "친구가 어려움에 처했을 때 도와준 경험이 있나요?",
+                    "실패한 경험과 그로부터 배운 점을 말씀해주세요.",
+                    "지금까지 살아오면서 겪었던 가장 힘들었던 경험은 무엇이고 어떻게 극복했나요?",
+                    "스트레스를 받을 때 어떻게 해소하나요?",
+                    "새로운 환경에 적응하는 자신만의 방법이 있나요?",
+                    "최근에 읽은 책 중 가장 인상 깊었던 책과 그 이유를 말씀해주세요.",
+                    "존경하는 인물이 있다면 누구이며, 그 이유는 무엇인가요?",
+                    "봉사활동 중 가장 기억에 남는 활동이 있나요?",
+                    "가장 중요하게 생각하는 가치관은 무엇인가요?"
+                ],
+                department: [
+                    "대학 입학 후 가장 먼저 하고 싶은 일은 무엇인가요?",
+                    "입학 후 학업계획을 말해주세요.",
+                    "10년 후 자신의 모습은 어떨 것 같나요?",
+                    "졸업 후 진로 계획은 어떻게 되나요?",
+                    "이 학과에서 가장 듣고 싶은 과목은 무엇인가요?",
+                    "이 학과에 지원하기 위해 어떤 노력을 했나요?"
+                ],
+                technical: [],
+            }
         };
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {
-            window.speechSynthesis.onvoiceschanged = setVoice;
+
+        // 전역 변수
+        let categories = {};
+        let questions = {};
+        let answers = [];
+        let currentQuestion = null;
+        let isRecording = false;
+        let recognition = null;
+        let timerInterval = null;
+        let seconds = 0;
+        let editingQuestionId = null;
+        let koreanVoice = null; // TTS 목소리 저장 변수
+        let presets = []; // 프리셋 저장 배열
+
+        // 집중 모드 관련 전역 변수
+        let isInFocusMode = false;
+        let focusState = 'idle'; // idle -> waiting -> listening -> processing
+        const FOCUS_DELAY = 500;
+
+        // 음성 녹음 관련 전역 변수
+        let audioRecordingEnabled = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let currentAudioBlob = null;
+        let audioStream = null;
+
+        // 초기화
+        function init() {
+            loadKoreanVoice(); // 자연스러운 한국어 목소리 로드
+            loadDataFromStorage();
+            loadPresetsFromStorage(); // 프리셋 로드
+            loadAudioRecordingState(); // 음성 녹음 상태 로드
+            updateAllUIs();
+            updateAnswerList();
+            initSpeechRecognition();
+            createFocusModeButton();
         }
-        setVoice();
-    }
 
-    // --- 데이터 관리 ---
-    function loadDataFromStorage() {
-        const storedCategories = localStorage.getItem('interviewCategories');
-        const storedQuestions = localStorage.getItem('interviewQuestions');
-        const storedAnswers = localStorage.getItem('interviewAnswers');
+        function createFocusModeButton() {
+            const focusModeBtn = document.createElement('button');
+            focusModeBtn.className = 'btn-secondary';
+            focusModeBtn.textContent = '집중 모드';
+            focusModeBtn.onclick = enterFocusMode;
+            document.querySelector('.header').appendChild(focusModeBtn);
+        }
+        
+        function loadKoreanVoice() {
+            const setVoice = () => {
+                const voices = window.speechSynthesis.getVoices();
+                koreanVoice = voices.find(voice => voice.lang === 'ko-KR' && voice.name.includes('Online')) || 
+                            voices.find(voice => voice.lang === 'ko-KR');
+            };
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                window.speechSynthesis.onvoiceschanged = setVoice;
+            }
+            setVoice();
+        }
 
-        categories = storedCategories ? JSON.parse(storedCategories) : JSON.parse(JSON.stringify(defaultData.categories));
-        questions = storedQuestions ? JSON.parse(storedQuestions) : JSON.parse(JSON.stringify(defaultData.questions));
-        answers = storedAnswers ? JSON.parse(storedAnswers) : [];
+        // --- 데이터 관리 ---
+        function loadDataFromStorage() {
+            const storedCategories = localStorage.getItem('interviewCategories');
+            const storedQuestions = localStorage.getItem('interviewQuestions');
+            const storedAnswers = localStorage.getItem('interviewAnswers');
 
-        if (!storedCategories && !storedQuestions) {
+            categories = storedCategories ? JSON.parse(storedCategories) : JSON.parse(JSON.stringify(defaultData.categories));
+            questions = storedQuestions ? JSON.parse(storedQuestions) : JSON.parse(JSON.stringify(defaultData.questions));
+            answers = storedAnswers ? JSON.parse(storedAnswers) : [];
+
+            if (!storedCategories && !storedQuestions) {
+                saveCategoriesToStorage();
+                saveQuestionsToStorage();
+            }
+        }
+
+        function saveCategoriesToStorage() { localStorage.setItem('interviewCategories', JSON.stringify(categories)); }
+        function saveQuestionsToStorage() { localStorage.setItem('interviewQuestions', JSON.stringify(questions)); }
+        function saveAnswersToStorage() { localStorage.setItem('interviewAnswers', JSON.stringify(answers)); }
+        function saveDataToStorage() {
             saveCategoriesToStorage();
             saveQuestionsToStorage();
         }
-    }
 
-    function saveCategoriesToStorage() { localStorage.setItem('interviewCategories', JSON.stringify(categories)); }
-    function saveQuestionsToStorage() { localStorage.setItem('interviewQuestions', JSON.stringify(questions)); }
-    function saveAnswersToStorage() { localStorage.setItem('interviewAnswers', JSON.stringify(answers)); }
 
-    // --- UI 렌더링 ---
-    function updateAllUIs() {
-        renderCategoryManagement();
-        renderQuestionAccordion();
-        updateCategorySelectors();
-        updateRecentAnswers();
-        updateStats();
-    }
+        // --- UI 렌더링 ---
+        function updateAllUIs() {
+            renderCategoryManagement();
+            renderQuestionAccordion();
+            updateCategorySelectors();
+            updateRecentAnswers();
+            updateStats();
+        }
 
-    function renderCategoryManagement() {
-        const container = document.getElementById('category-list-new');
-        if (!container) return;
-        
-        container.innerHTML = Object.entries(categories).map(([id, name]) => `
-            <div class="category-list-item">
-                <div class="category-info-new">
-                    <span class="category-name-badge">${id}</span>
-                    <span>${name}</span>
-                    <span class="question-count-badge">${(questions[id] || []).length}개 질문</span>
-                </div>
-                <div class="answer-actions">
-                    <button class="btn-secondary btn-small" onclick='editCategory("${id}")'>수정</button>
-                    <button class="btn-danger btn-small" onclick='deleteCategory("${id}")'>삭제</button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function renderQuestionAccordion() {
-        const container = document.getElementById('question-accordion-list');
-        if (!container) return;
-
-        container.innerHTML = Object.entries(categories).map(([id, name]) => {
-            const questionList = questions[id] || [];
-            const questionsHtml = questionList.map((q, index) => `
-                <div class="question-list-item">
-                    <span class="question-number-new">${index + 1}.</span>
-                    <span class="question-text-view">${q}</span>
+        function renderCategoryManagement() {
+            const container = document.getElementById('category-list-new');
+            if (!container) return;
+            
+            container.innerHTML = Object.entries(categories).map(([id, name]) => `
+                <div class="category-list-item">
+                    <div class="category-info-new">
+                        <span class="category-name-badge">${id}</span>
+                        <span>${name}</span>
+                        <span class="question-count-badge">${(questions[id] || []).length}개 질문</span>
+                    </div>
                     <div class="answer-actions">
-                        <button class="btn-secondary btn-small btn-icon" onclick='editQuestion("${id}", ${index})' title="수정">✏️</button>
-                        <button class="btn-danger btn-small btn-icon" onclick='deleteQuestion("${id}", ${index})' title="삭제">🗑️</button>
+                        <button class="btn-secondary btn-small" onclick='editCategory("${id}")'>수정</button>
+                        <button class="btn-danger btn-small" onclick='deleteCategory("${id}")'>삭제</button>
                     </div>
                 </div>
             `).join('');
+        }
 
-            return `
-                <div class="accordion-item">
-                    <div class="accordion-header" onclick="toggleAccordion(this)" data-category-id="${id}">
-                        <div class="accordion-header-left">
-                            <span class="toggle-icon">▶</span>
-                            <span>${name}</span>
-                            <span class="question-count-badge">${questionList.length}개</span>
-                        </div>
-                        <div class="accordion-header-right">
-                             <button class="btn-secondary btn-small" onclick="event.stopPropagation(); exportCategory('${id}');">내보내기</button>
-                             <button class="btn-secondary btn-small" onclick="event.stopPropagation(); triggerCategoryImport('${id}');">가져오기</button>
-                             <button class="btn-primary btn-small" onclick="event.stopPropagation(); openAddQuestionModal('${id}');">+</button>
+        function renderQuestionAccordion() {
+            const container = document.getElementById('question-accordion-list');
+            if (!container) return;
+
+            container.innerHTML = Object.entries(categories).map(([id, name]) => {
+                const questionList = questions[id] || [];
+                const questionsHtml = questionList.map((q, index) => `
+                    <div class="question-list-item">
+                        <span class="question-number-new">${index + 1}.</span>
+                        <span class="question-text-view">${q}</span>
+                        <div class="answer-actions">
+                            <button class="btn-secondary btn-small btn-icon" onclick='editQuestion("${id}", ${index})' title="수정">✏️</button>
+                            <button class="btn-danger btn-small btn-icon" onclick='deleteQuestion("${id}", ${index})' title="삭제">🗑️</button>
                         </div>
                     </div>
-                    <div class="accordion-content" id="content-${id}">
-                        ${questionsHtml.length > 0 ? questionsHtml : '<p style="color: #6b7280; text-align: center; padding: 10px 0;">질문이 없습니다.</p>'}
-                        <form class="inline-add-form" onsubmit="inlineAddQuestion(event, '${id}')">
-                            <input type="text" placeholder="새 질문을 입력하고 Enter를 누르세요..." required>
-                        </form>
+                `).join('');
+
+                return `
+                    <div class="accordion-item">
+                        <div class="accordion-header" onclick="toggleAccordion(this)" data-category-id="${id}">
+                            <div class="accordion-header-left">
+                                <span class="toggle-icon">▶</span>
+                                <span>${name}</span>
+                                <span class="question-count-badge">${questionList.length}개</span>
+                            </div>
+                            <div class="accordion-header-right">
+                                <button class="btn-secondary btn-small" onclick="event.stopPropagation(); exportCategory('${id}');">내보내기</button>
+                                <button class="btn-secondary btn-small" onclick="event.stopPropagation(); triggerCategoryImport('${id}');">가져오기</button>
+                                <button class="btn-primary btn-small" onclick="event.stopPropagation(); openAddQuestionModal('${id}');">+</button>
+                            </div>
+                        </div>
+                        <div class="accordion-content" id="content-${id}">
+                            ${questionsHtml.length > 0 ? questionsHtml : '<p style="color: #6b7280; text-align: center; padding: 10px 0;">질문이 없습니다.</p>'}
+                            <form class="inline-add-form" onsubmit="inlineAddQuestion(event, '${id}')">
+                                <input type="text" placeholder="새 질문을 입력하고 Enter를 누르세요..." required>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    function toggleAccordion(headerElement) {
-        headerElement.classList.toggle('active');
-        const content = headerElement.nextElementSibling;
-        content.style.display = content.style.display === "block" ? "none" : "block";
-    }
-
-    function inlineAddQuestion(event, categoryId) {
-        event.preventDefault();
-        const input = event.target.querySelector('input');
-        const newQuestion = input.value.trim();
-        if (newQuestion) {
-            if (!questions[categoryId]) questions[categoryId] = [];
-            questions[categoryId].push(newQuestion);
-            saveQuestionsToStorage();
-            updateAllUIs();
-            input.value = '';
-            const header = document.querySelector(`.accordion-header[data-category-id="${categoryId}"]`);
-            if (header && !header.classList.contains('active')) toggleAccordion(header);
-        }
-    }
-
-    // --- 카테고리 관리 ---
-    function openAddCategoryModal() {
-        document.getElementById('categoryModalTitle').textContent = '카테고리 추가';
-        document.getElementById('categoryForm').reset();
-        document.getElementById('categoryId').disabled = false;
-        document.getElementById('editingCategoryId').value = '';
-        document.getElementById('categoryModal').classList.add('active');
-    }
-
-    function editCategory(categoryId) {
-        document.getElementById('categoryModalTitle').textContent = '카테고리 편집';
-        document.getElementById('categoryForm').reset();
-        document.getElementById('categoryId').value = categoryId;
-        document.getElementById('categoryId').disabled = true;
-        document.getElementById('categoryName').value = categories[categoryId];
-        document.getElementById('editingCategoryId').value = categoryId;
-        document.getElementById('categoryModal').classList.add('active');
-    }
-
-    function closeCategoryModal() { document.getElementById('categoryModal').classList.remove('active'); }
-
-    function saveCategory(event) {
-        event.preventDefault();
-        const categoryId = document.getElementById('categoryId').value.trim();
-        const categoryName = document.getElementById('categoryName').value.trim();
-        const oldCategoryId = document.getElementById('editingCategoryId').value;
-
-        if (!categoryId || !categoryName) return;
-        if (!oldCategoryId && categories[categoryId]) {
-            alert('이미 존재하는 카테고리 ID입니다.');
-            return;
+                `;
+            }).join('');
         }
 
-        if (oldCategoryId) categories[oldCategoryId] = categoryName;
-        else {
-            categories[categoryId] = categoryName;
-            if (!questions[categoryId]) questions[categoryId] = [];
+        function toggleAccordion(headerElement) {
+            headerElement.classList.toggle('active');
+            const content = headerElement.nextElementSibling;
+            content.style.display = content.style.display === "block" ? "none" : "block";
         }
-        saveCategoriesToStorage();
-        saveQuestionsToStorage();
-        updateAllUIs();
-        closeCategoryModal();
-    }
 
-    function deleteCategory(categoryId) {
-        const questionCount = (questions[categoryId] || []).length;
-        const confirmMsg = questionCount > 0
-            ? `이 카테고리에는 ${questionCount}개의 질문이 있습니다. 카테고리와 함께 모든 질문을 삭제하시겠습니까?`
-            : `'${categories[categoryId]}' 카테고리를 삭제하시겠습니까?`;
-        if (confirm(confirmMsg)) {
-            delete categories[categoryId];
-            delete questions[categoryId];
+        function inlineAddQuestion(event, categoryId) {
+            event.preventDefault();
+            const input = event.target.querySelector('input');
+            const newQuestion = input.value.trim();
+            if (newQuestion) {
+                if (!questions[categoryId]) questions[categoryId] = [];
+                questions[categoryId].push(newQuestion);
+                saveQuestionsToStorage();
+                updateAllUIs();
+                input.value = '';
+                const header = document.querySelector(`.accordion-header[data-category-id="${categoryId}"]`);
+                if (header && !header.classList.contains('active')) toggleAccordion(header);
+            }
+        }
+
+        // --- 카테고리 관리 ---
+        function openAddCategoryModal() {
+            document.getElementById('categoryModalTitle').textContent = '카테고리 추가';
+            document.getElementById('categoryForm').reset();
+            document.getElementById('categoryId').disabled = false;
+            document.getElementById('editingCategoryId').value = '';
+            document.getElementById('categoryModal').classList.add('active');
+        }
+
+        function editCategory(categoryId) {
+            document.getElementById('categoryModalTitle').textContent = '카테고리 편집';
+            document.getElementById('categoryForm').reset();
+            document.getElementById('categoryId').value = categoryId;
+            document.getElementById('categoryId').disabled = true;
+            document.getElementById('categoryName').value = categories[categoryId];
+            document.getElementById('editingCategoryId').value = categoryId;
+            document.getElementById('categoryModal').classList.add('active');
+        }
+
+        function closeCategoryModal() { document.getElementById('categoryModal').classList.remove('active'); }
+
+        function saveCategory(event) {
+            event.preventDefault();
+            const categoryId = document.getElementById('categoryId').value.trim();
+            const categoryName = document.getElementById('categoryName').value.trim();
+            const oldCategoryId = document.getElementById('editingCategoryId').value;
+
+            if (!categoryId || !categoryName) return;
+            if (!oldCategoryId && categories[categoryId]) {
+                alert('이미 존재하는 카테고리 ID입니다.');
+                return;
+            }
+
+            if (oldCategoryId) categories[oldCategoryId] = categoryName;
+            else {
+                categories[categoryId] = categoryName;
+                if (!questions[categoryId]) questions[categoryId] = [];
+            }
             saveCategoriesToStorage();
             saveQuestionsToStorage();
             updateAllUIs();
+            closeCategoryModal();
         }
-    }
-    
-    // --- 질문 관리 ---
-    function openAddQuestionModal(categoryId = null) {
-        editingQuestionId = null;
-        document.getElementById('modalTitle').textContent = '질문 추가';
-        document.getElementById('questionForm').reset();
-        document.getElementById('questionId').value = '';
-        document.getElementById('questionCategory').value = categoryId || Object.keys(categories)[0] || '';
-        document.getElementById('questionModal').classList.add('active');
-    }
 
-    function editQuestion(categoryId, index) {
-        editingQuestionId = `${categoryId}-${index}`;
-        document.getElementById('modalTitle').textContent = '질문 편집';
-        document.getElementById('questionForm').reset();
-        document.getElementById('questionCategory').value = categoryId;
-        document.getElementById('questionText').value = questions[categoryId][index];
-        document.getElementById('questionId').value = editingQuestionId;
-        document.getElementById('questionModal').classList.add('active');
-    }
+        function deleteCategory(categoryId) {
+            const questionCount = (questions[categoryId] || []).length;
+            const confirmMsg = questionCount > 0
+                ? `이 카테고리에는 ${questionCount}개의 질문이 있습니다. 카테고리와 함께 모든 질문을 삭제하시겠습니까?`
+                : `'${categories[categoryId]}' 카테고리를 삭제하시겠습니까?`;
+            if (confirm(confirmMsg)) {
+                delete categories[categoryId];
+                delete questions[categoryId];
+                saveCategoriesToStorage();
+                saveQuestionsToStorage();
+                updateAllUIs();
+            }
+        }
+        
+        // --- 질문 관리 ---
+        function openAddQuestionModal(categoryId = null) {
+            editingQuestionId = null;
+            document.getElementById('modalTitle').textContent = '질문 추가';
+            document.getElementById('questionForm').reset();
+            document.getElementById('questionId').value = '';
+            document.getElementById('questionCategory').value = categoryId || Object.keys(categories)[0] || '';
+            document.getElementById('questionModal').classList.add('active');
+        }
 
-    function closeQuestionModal() { document.getElementById('questionModal').classList.remove('active'); }
+        function editQuestion(categoryId, index) {
+            editingQuestionId = `${categoryId}-${index}`;
+            document.getElementById('modalTitle').textContent = '질문 편집';
+            document.getElementById('questionForm').reset();
+            document.getElementById('questionCategory').value = categoryId;
+            document.getElementById('questionText').value = questions[categoryId][index];
+            document.getElementById('questionId').value = editingQuestionId;
+            document.getElementById('questionModal').classList.add('active');
+        }
 
-    function saveQuestion(event) {
-        event.preventDefault();
-        const categoryId = document.getElementById('questionCategory').value;
-        const text = document.getElementById('questionText').value.trim();
-        const questionId = document.getElementById('questionId').value;
+        function closeQuestionModal() { document.getElementById('questionModal').classList.remove('active'); }
 
-        if (!text) return;
-        if (!questions[categoryId]) questions[categoryId] = [];
+        function saveQuestion(event) {
+            event.preventDefault();
+            const categoryId = document.getElementById('questionCategory').value;
+            const text = document.getElementById('questionText').value.trim();
+            const questionId = document.getElementById('questionId').value;
 
-        if (questionId) {
-            const [oldCategoryId, index] = questionId.split('-');
-            if (oldCategoryId === categoryId) questions[oldCategoryId][parseInt(index)] = text;
-            else {
-                questions[oldCategoryId].splice(parseInt(index), 1);
+            if (!text) return;
+            if (!questions[categoryId]) questions[categoryId] = [];
+
+            if (questionId) {
+                const [oldCategoryId, index] = questionId.split('-');
+                if (oldCategoryId === categoryId) questions[oldCategoryId][parseInt(index)] = text;
+                else {
+                    questions[oldCategoryId].splice(parseInt(index), 1);
+                    questions[categoryId].push(text);
+                }
+            } else {
                 questions[categoryId].push(text);
             }
-        } else {
-            questions[categoryId].push(text);
+            saveQuestionsToStorage();
+            updateAllUIs();
+            closeQuestionModal();
         }
-        saveQuestionsToStorage();
-        updateAllUIs();
-        closeQuestionModal();
-    }
 
-    function deleteQuestion(categoryId, index) {
-        questions[categoryId].splice(index, 1);
-        saveQuestionsToStorage();
-        updateAllUIs();
-    }
+        function deleteQuestion(categoryId, index) {
+            questions[categoryId].splice(index, 1);
+            saveQuestionsToStorage();
+            updateAllUIs();
+        }
 
-    // --- 데이터 관리 (전체/카테고리별) ---
-    function exportDatabase() {
-        const data = { categories, questions };
-        const dataStr = JSON.stringify(data, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `interview_db_all_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
+        // --- 데이터 관리 (전체/카테고리별) ---
+        function exportDatabase() {
+            const data = { categories, questions };
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `interview_db_all_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
 
-    function importDatabase(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                if (data.categories && data.questions) {
-                    if (confirm('가져온 데이터로 기존 질문 데이터베이스를 완전히 덮어쓰시겠습니까?')) {
-                        categories = data.categories;
-                        questions = data.questions;
-                        saveCategoriesToStorage();
+        function importDatabase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.categories && data.questions) {
+                        if (confirm('가져온 데이터로 기존 질문 데이터베이스를 완전히 덮어쓰시겠습니까?')) {
+                            categories = data.categories;
+                            questions = data.questions;
+                            saveCategoriesToStorage();
+                            saveQuestionsToStorage();
+                            updateAllUIs();
+                            alert('데이터베이스를 성공적으로 가져왔습니다.');
+                        }
+                    } else { alert('올바른 형식의 데이터베이스 파일이 아닙니다.'); }
+                } catch (error) { alert('파일을 읽는 중 오류가 발생했습니다.'); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+        
+        function exportCategory(categoryId) {
+            const categoryQuestions = questions[categoryId] || [];
+            const dataStr = JSON.stringify(categoryQuestions, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `questions_${categoryId}_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function triggerCategoryImport(categoryId) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (event) => importCategory(event, categoryId);
+            input.click();
+        }
+
+        function importCategory(event, categoryId) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedQuestions = JSON.parse(e.target.result);
+                    if (Array.isArray(importedQuestions)) {
+                        if (!questions[categoryId]) questions[categoryId] = [];
+                        const originalCount = questions[categoryId].length;
+                        questions[categoryId] = [...new Set([...questions[categoryId], ...importedQuestions])];
+                        const addedCount = questions[categoryId].length - originalCount;
                         saveQuestionsToStorage();
                         updateAllUIs();
-                        alert('데이터베이스를 성공적으로 가져왔습니다.');
-                    }
-                } else { alert('올바른 형식의 데이터베이스 파일이 아닙니다.'); }
-            } catch (error) { alert('파일을 읽는 중 오류가 발생했습니다.'); }
-        };
-        reader.readAsText(file);
-        event.target.value = '';
-    }
-    
-    function exportCategory(categoryId) {
-        const categoryQuestions = questions[categoryId] || [];
-        const dataStr = JSON.stringify(categoryQuestions, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `questions_${categoryId}_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    function triggerCategoryImport(categoryId) {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = (event) => importCategory(event, categoryId);
-        input.click();
-    }
-
-    function importCategory(event, categoryId) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const importedQuestions = JSON.parse(e.target.result);
-                if (Array.isArray(importedQuestions)) {
-                    if (!questions[categoryId]) questions[categoryId] = [];
-                    const originalCount = questions[categoryId].length;
-                    questions[categoryId] = [...new Set([...questions[categoryId], ...importedQuestions])];
-                    const addedCount = questions[categoryId].length - originalCount;
-                    saveQuestionsToStorage();
-                    updateAllUIs();
-                    alert(`'${categories[categoryId]}' 카테고리에 ${addedCount}개의 새 질문을 가져왔습니다.`);
-                } else { alert('올바른 형식의 질문 파일(질문 목록 배열)이 아닙니다.'); }
-            } catch (error) { alert('파일을 읽는 중 오류가 발생했습니다.'); }
-        };
-        reader.readAsText(file);
-    }
-
-    // --- 음성 인식 (고급 버전) ---
-    function initSpeechRecognition() {
-        if (window.location.protocol === 'file:') {
-            document.getElementById('setupWarning').style.display = 'block';
-            return;
+                        alert(`'${categories[categoryId]}' 카테고리에 ${addedCount}개의 새 질문을 가져왔습니다.`);
+                    } else { alert('올바른 형식의 질문 파일(질문 목록 배열)이 아닙니다.'); }
+                } catch (error) { alert('파일을 읽는 중 오류가 발생했습니다.'); }
+            };
+            reader.readAsText(file);
         }
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            try {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.continuous = true;
-                recognition.interimResults = true;
-                recognition.lang = 'ko-KR';
-                recognition.maxAlternatives = 1;
-                let finalTranscript = '';
-                let lastFinalResultIndex = 0;
 
-                recognition.onstart = () => {
-                    finalTranscript = document.getElementById('transcriptionText').value;
-                     if (finalTranscript.length > 0 && !finalTranscript.endsWith(' ')) finalTranscript += ' ';
-                    lastFinalResultIndex = 0;
-                    showRecognitionStatus('음성 인식 활성화 - 말씀해주세요', '#7c9473', '●');
-                };
-
-                recognition.onresult = (event) => {
-                    let interimTranscript = '';
-                    for (let i = lastFinalResultIndex; i < event.results.length; i++) {
-                        const transcript = event.results[i][0].transcript;
-                        if (event.results[i].isFinal) {
-                            finalTranscript += transcript + ' ';
-                            lastFinalResultIndex = i + 1;
-                        } else {
-                            interimTranscript += transcript;
-                        }
-                    }
-                    document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
-                    if (interimTranscript) showRecognitionStatus(`🔊 인식 중...`, '#3b82f6', '●');
-                };
-
-                recognition.onerror = (event) => {
-                    let errorMsg = '음성 인식 오류';
-                    switch(event.error) {
-                        case 'network': errorMsg = '네트워크 오류. 인터넷 연결을 확인하세요.'; break;
-                        case 'not-allowed': errorMsg = '마이크 권한이 거부되었습니다. 권한을 허용해주세요.'; break;
-                        case 'no-speech': errorMsg = '음성이 감지되지 않았습니다. 다시 시도해주세요.'; break;
-                        case 'audio-capture': errorMsg = '마이크를 찾을 수 없습니다.'; break;
-                    }
-                    showStatus(errorMsg, 'error');
-                    showRecognitionStatus(errorMsg, '#ef4444', '!');
-                    stopRecording();
-                };
-
-                recognition.onend = () => {
-                    if (isRecording) {
-                        try { recognition.start(); }
-                        catch (e) { stopRecording(); showRecognitionStatus('⚠️ 재시작 실패', '#ef4444', '!'); }
-                    } else {
-                        showRecognitionStatus('음성 인식 대기 중', '#6b7280', '○');
-                    }
-                };
-                showRecognitionStatus('음성 인식 준비 완료', '#10b981', '✓');
-            } catch (e) {
-                showStatus('음성 인식을 초기화할 수 없습니다.', 'error');
-                showRecognitionStatus('❌ 초기화 실패', '#ef4444', '!');
+        // --- 음성 인식 (고급 버전) ---
+        function initSpeechRecognition() {
+            if (window.location.protocol === 'file:') {
+                document.getElementById('setupWarning').style.display = 'block';
+                return;
             }
-        } else {
-            showStatus('이 브라우저는 음성 인식을 지원하지 않습니다.', 'error');
-            showRecognitionStatus('❌ 브라우저 미지원', '#ef4444', '!');
-        }
-    }
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                try {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    recognition = new SpeechRecognition();
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    recognition.lang = 'ko-KR';
+                    recognition.maxAlternatives = 1;
+                    let finalTranscript = '';
+                    let lastFinalResultIndex = 0;
 
-    function showRecognitionStatus(message, color, icon) {
-        const statusBar = document.getElementById('recognitionStatusBar');
-        const statusText = document.getElementById('recognitionStatusText');
-        const statusIcon = document.getElementById('recognitionStatusIcon');
-        
-        if (statusBar) {
-            statusBar.style.display = 'block';
-            const wrapper = statusBar.querySelector('div');
-            wrapper.style.backgroundColor = color + '20';
-            wrapper.style.borderColor = color;
-            statusText.textContent = message;
-            statusText.style.color = color;
-            statusIcon.textContent = icon;
-            statusIcon.style.color = color;
-        }
-    }
+                    recognition.onstart = () => {
+                        finalTranscript = document.getElementById('transcriptionText').value;
+                        if (finalTranscript.length > 0 && !finalTranscript.endsWith(' ')) finalTranscript += ' ';
+                        lastFinalResultIndex = 0;
+                        showRecognitionStatus('음성 인식 활성화 - 말씀해주세요', '#7c9473', '●');
+                    };
 
-    function toggleRecording() {
-        if (!recognition) {
-            showStatus('음성 인식을 사용할 수 없습니다.', 'error');
-            return;
-        }
-        if (!currentQuestion) {
-            showStatus('먼저 질문을 선택해주세요.', 'error');
-            return;
-        }
-        if (isRecording) stopRecording();
-        else startRecording();
-    }
+                    recognition.onresult = (event) => {
+                        let interimTranscript = '';
+                        for (let i = lastFinalResultIndex; i < event.results.length; i++) {
+                            const transcript = event.results[i][0].transcript;
+                            if (event.results[i].isFinal) {
+                                finalTranscript += transcript + ' ';
+                                lastFinalResultIndex = i + 1;
+                            } else {
+                                interimTranscript += transcript;
+                            }
+                        }
+                        document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
+                        if (interimTranscript) showRecognitionStatus(`🔊 인식 중...`, '#3b82f6', '●');
+                    };
 
-    function startRecording() {
-        try {
-            recognition.start();
+                    recognition.onerror = (event) => {
+                        let errorMsg = '음성 인식 오류';
+                        switch(event.error) {
+                            case 'network': errorMsg = '네트워크 오류. 음성 인식은 중단되지만 녹음은 계속됩니다.'; break;
+                            case 'not-allowed': errorMsg = '마이크 권한이 거부되었습니다. 권한을 허용해주세요.'; break;
+                            case 'no-speech': errorMsg = '음성이 감지되지 않았습니다. 잠시 후 다시 시도합니다.'; break;
+                            case 'audio-capture': errorMsg = '마이크를 찾을 수 없습니다.'; break;
+                        }
+                        showStatus(errorMsg, 'error');
+                        showRecognitionStatus(errorMsg, '#ef4444', '!');
+                        
+                        // 핵심 변경: 치명적인 오류(권한, 마이크 없음)가 아니면 전체 녹음을 중단하지 않음
+                        if (event.error === 'not-allowed' || event.error === 'audio-capture') {
+                            stopRecording();
+                        }
+                    };
+
+                    recognition.onend = () => {
+                        if (isRecording) {
+                            try { 
+                                // 네트워크가 온라인일 때만 재시작
+                                if (navigator.onLine) recognition.start(); 
+                            }
+                            catch (e) { 
+                                stopRecording(); 
+                                showRecognitionStatus('⚠️ 재시작 실패', '#ef4444', '!'); 
+                            }
+                        } else {
+                            showRecognitionStatus('음성 인식 대기 중', '#6b7280', '○');
+                        }
+                    };
+                    showRecognitionStatus('음성 인식 준비 완료', '#10b981', '✓');
+                } catch (e) {
+                    showStatus('음성 인식을 초기화할 수 없습니다.', 'error');
+                    showRecognitionStatus('❌ 초기화 실패', '#ef4444', '!');
+                }
+            } else {
+                showStatus('이 브라우저는 음성 인식을 지원하지 않습니다.', 'error');
+                showRecognitionStatus('❌ 브라우저 미지원', '#ef4444', '!');
+            }
+        }
+
+        function showRecognitionStatus(message, color, icon) {
+            const statusBar = document.getElementById('recognitionStatusBar');
+            const statusText = document.getElementById('recognitionStatusText');
+            const statusIcon = document.getElementById('recognitionStatusIcon');
+            
+            if (statusBar) {
+                statusBar.style.display = 'block';
+                const wrapper = statusBar.querySelector('div');
+                wrapper.style.backgroundColor = color + '20';
+                wrapper.style.borderColor = color;
+                statusText.textContent = message;
+                statusText.style.color = color;
+                statusIcon.textContent = icon;
+                statusIcon.style.color = color;
+            }
+        }
+
+        function toggleRecording() {
+            if (!currentQuestion) {
+                showStatus('먼저 질문을 선택해주세요.', 'error');
+                return;
+            }
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
             isRecording = true;
             
-            // 음성 녹음 기능이 활성화된 경우 오디오 녹음 시작
+            // 1. 음성 인식 시작 (온라인일 때만 시도)
+            if (recognition && navigator.onLine) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.warn("음성 인식을 시작할 수 없습니다:", e);
+                    showStatus('음성 인식은 시작되지 않았지만, 녹음은 계속됩니다.', 'info');
+                }
+            } else if (!navigator.onLine) {
+                showRecognitionStatus('오프라인 - 녹음만 진행', '#6b7280', '⌿');
+            }
+
+            // 2. 음성 녹음 기능 (활성화 시 항상 시작)
             if (audioRecordingEnabled) {
                 startAudioRecording();
             }
             
+            // 3. UI 업데이트 및 타이머 시작
             if (!isInFocusMode) {
                 document.getElementById('recordBtn').textContent = '녹음 중지';
                 document.getElementById('recordBtn').classList.add('recording');
-                startTimer();
-                showStatus('녹음 중... 답변을 시작하세요.', 'info');
-            }
-        } catch (e) {
-            showStatus('녹음을 시작할 수 없습니다. 텍스트로 직접 입력해주세요.', 'error');
-            isRecording = false;
-        }
-    }
-
-    function stopRecording() {
-        if (recognition && isRecording) {
-            isRecording = false;
-            recognition.stop();
-        } else {
-            isRecording = false;
-        }
-        
-        // 음성 녹음 중지
-        if (audioRecordingEnabled && mediaRecorder && mediaRecorder.state !== 'inactive') {
-            stopAudioRecording();
-        }
-        
-        if (!isInFocusMode) {
-            document.getElementById('recordBtn').textContent = '녹음 시작';
-            document.getElementById('recordBtn').classList.remove('recording');
-            stopTimer();
-            if (document.getElementById('transcriptionText').value.trim()) {
-                showStatus('녹음이 중지되었습니다. 답변을 확인하고 저장하세요.', 'success');
-            }
-        }
-    }
-
-    // --- 음성 녹음 기능 관련 함수들 ---
-    function loadAudioRecordingState() {
-        const saved = localStorage.getItem('audioRecordingEnabled');
-        audioRecordingEnabled = saved === 'true';
-        updateAudioRecordingToggle();
-    }
-
-    function toggleAudioRecording() {
-        audioRecordingEnabled = !audioRecordingEnabled;
-        localStorage.setItem('audioRecordingEnabled', audioRecordingEnabled.toString());
-        updateAudioRecordingToggle();
-        showStatus(audioRecordingEnabled ? '음성 녹음 기능이 활성화되었습니다.' : '음성 녹음 기능이 비활성화되었습니다.', 'success');
-    }
-
-    function updateAudioRecordingToggle() {
-        const toggle = document.getElementById('audioRecordingToggle');
-        if (toggle) {
-            if (audioRecordingEnabled) {
-                toggle.classList.add('active');
-            } else {
-                toggle.classList.remove('active');
-            }
-        }
-    }
-
-    async function startAudioRecording() {
-        try {
-            audioChunks = [];
-            currentAudioBlob = null;
-            
-            // 오디오 스트림 가져오기
-            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
-            // MediaRecorder 생성
-            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-            mediaRecorder = new MediaRecorder(audioStream, { mimeType });
-            
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunks.push(event.data);
-                }
-            };
-            
-            mediaRecorder.onstop = () => {
-                currentAudioBlob = new Blob(audioChunks, { type: mimeType });
-                audioChunks = [];
                 
-                // 스트림 정리
-                if (audioStream) {
-                    audioStream.getTracks().forEach(track => track.stop());
-                    audioStream = null;
+                let statusMsg = "녹음이 시작되었습니다.";
+                if (!navigator.onLine && audioRecordingEnabled) {
+                    statusMsg = "오프라인 상태입니다. 음성만 녹음됩니다.";
+                } else if (!navigator.onLine && !audioRecordingEnabled) {
+                    statusMsg = "오프라인 상태입니다. 답변을 직접 입력해주세요.";
                 }
-            };
-            
-            mediaRecorder.start();
-        } catch (error) {
-            console.error('Audio recording error:', error);
-            showStatus('오디오 녹음을 시작할 수 없습니다. 마이크 권한을 확인하세요.', 'error');
-        }
-    }
+                showStatus(statusMsg, 'info');
 
-    function stopAudioRecording() {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-        }
-    }
-
-    function blobToBase64(blob) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    }
-
-    function downloadAudio(audioData, timestamp) {
-        try {
-            // Base64 데이터를 Blob으로 변환
-            const byteString = atob(audioData.split(',')[1]);
-            const mimeString = audioData.split(',')[0].split(':')[1].split(';')[0];
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
-            for (let i = 0; i < byteString.length; i++) {
-                ia[i] = byteString.charCodeAt(i);
+                startTimer();
             }
-            const blob = new Blob([ab], { type: mimeString });
-            
-            // 다운로드 링크 생성
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `answer_${timestamp}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error('Download error:', error);
-            showStatus('오디오 다운로드 중 오류가 발생했습니다.', 'error');
         }
-    }
 
-    function playAudio(audioData, buttonElement) {
-        try {
-            // 기존에 재생 중인 오디오가 있다면 중지
-            const existingAudio = document.querySelector('audio.playing-audio');
-            if (existingAudio) {
-                existingAudio.pause();
-                existingAudio.remove();
+        function stopRecording() {
+            if (!isRecording) return; // 중복 호출 방지
+
+            // 핵심 변경: isRecording 상태를 먼저 false로 바꿔서 onend 이벤트에서 재시작을 방지
+            isRecording = false; 
+
+            // 음성 인식 중지
+            if (recognition) {
+                recognition.stop();
             }
-
-            // 오디오 요소 생성
-            const audio = new Audio(audioData);
-            audio.className = 'playing-audio';
             
-            // 재생 시작
+            // 음성 녹음 중지
+            if (audioRecordingEnabled && mediaRecorder && mediaRecorder.state !== 'inactive') {
+                stopAudioRecording();
+            }
+            
+            // UI 업데이트 및 타이머 중지
+            if (!isInFocusMode) {
+                document.getElementById('recordBtn').textContent = '녹음 시작';
+                document.getElementById('recordBtn').classList.remove('recording');
+                stopTimer();
+                if (document.getElementById('transcriptionText').value.trim()) {
+                    showStatus('녹음이 중지되었습니다. 답변을 확인하고 저장하세요.', 'success');
+                }
+            }
+        }
+
+        // --- 음성 녹음 기능 관련 함수들 ---
+        function loadAudioRecordingState() {
+            const saved = localStorage.getItem('audioRecordingEnabled');
+            audioRecordingEnabled = saved === 'true';
+            updateAudioRecordingToggle();
+        }
+
+        function toggleAudioRecording() {
+            audioRecordingEnabled = !audioRecordingEnabled;
+            localStorage.setItem('audioRecordingEnabled', audioRecordingEnabled.toString());
+            updateAudioRecordingToggle();
+            showStatus(audioRecordingEnabled ? '음성 녹음 기능이 활성화되었습니다.' : '음성 녹음 기능이 비활성화되었습니다.', 'success');
+        }
+
+        function updateAudioRecordingToggle() {
+            const toggle = document.getElementById('audioRecordingToggle');
+            if (toggle) {
+                if (audioRecordingEnabled) {
+                    toggle.classList.add('active');
+                } else {
+                    toggle.classList.remove('active');
+                }
+            }
+        }
+
+        async function startAudioRecording() {
+            try {
+                audioChunks = [];
+                currentAudioBlob = null;
+                
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+                mediaRecorder = new MediaRecorder(audioStream, { mimeType });
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = () => {
+                    currentAudioBlob = new Blob(audioChunks, { type: mimeType });
+                    audioChunks = [];
+                    
+                    if (audioStream) {
+                        audioStream.getTracks().forEach(track => track.stop());
+                        audioStream = null;
+                    }
+                };
+                
+                mediaRecorder.start();
+            } catch (error) {
+                console.error('Audio recording error:', error);
+                showStatus('오디오 녹음을 시작할 수 없습니다. 마이크 권한을 확인하세요.', 'error');
+            }
+        }
+
+        function stopAudioRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function downloadAudio(audioData, timestamp) {
+            try {
+                const byteString = atob(audioData.split(',')[1]);
+                const mimeString = audioData.split(',')[0].split(':')[1].split(';')[0];
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                const blob = new Blob([ab], { type: mimeString });
+                
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `answer_${timestamp}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Download error:', error);
+                showStatus('오디오 다운로드 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        function playAudio(audioData, buttonElement) {
+            try {
+                const existingAudio = document.querySelector('audio.playing-audio');
+                if (existingAudio) {
+                    existingAudio.pause();
+                    existingAudio.remove();
+                }
+
+                const audio = new Audio(audioData);
+                audio.className = 'playing-audio';
+                
+                audio.play();
+                buttonElement.textContent = '⏸️ 일시정지';
+                buttonElement.onclick = () => pauseAudio(audio, buttonElement, audioData);
+                
+                audio.onended = () => {
+                    buttonElement.textContent = '▶️ 재생';
+                    buttonElement.onclick = () => playAudio(audioData, buttonElement);
+                    audio.remove();
+                };
+                
+            } catch (error) {
+                console.error('Play error:', error);
+                showStatus('오디오 재생 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        function pauseAudio(audio, buttonElement, audioData) {
+            audio.pause();
+            buttonElement.textContent = '▶️ 재생';
+            buttonElement.onclick = () => resumeAudio(audio, buttonElement, audioData);
+        }
+
+        function resumeAudio(audio, buttonElement, audioData) {
             audio.play();
             buttonElement.textContent = '⏸️ 일시정지';
             buttonElement.onclick = () => pauseAudio(audio, buttonElement, audioData);
+        }
+
+        // --- 기타 유틸리티 함수 ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab.active, .tab-content.active').forEach(el => el.classList.remove('active'));
+            const clickedTab = Array.from(document.querySelectorAll('.tab')).find(tab => tab.getAttribute('onclick').includes(`'${tabName}'`));
+            if(clickedTab) clickedTab.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+            if (tabName === 'answers') updateAnswerList();
+            updateAllUIs();
+        }
+        
+        function updateCategorySelectors() {
+            const selectors = [document.getElementById('categorySelect'), document.getElementById('questionCategory')];
+            const categoryOptions = Object.entries(categories).map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+            selectors.forEach(selector => {
+                if (selector) {
+                    const currentVal = selector.value;
+                    selector.innerHTML = selector.id === 'categorySelect' ? '<option value="all">전체</option>' + categoryOptions : categoryOptions;
+                    selector.value = currentVal;
+                }
+            });
+        }
+
+        function startTimer() {
+            if (timerInterval) return;
+            timerInterval = setInterval(() => {
+                seconds++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        function resetTimer() {
+            stopTimer();
+            seconds = 0;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            document.getElementById('timer').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function getNewQuestion() {
+            const category = document.getElementById('categorySelect').value;
+            const availableQuestions = category === 'all' ? Object.values(questions).flat() : questions[category] || [];
+            if (availableQuestions.length === 0) {
+                showStatus('선택한 카테고리에 질문이 없습니다.', 'error');
+                currentQuestion = null;
+                document.getElementById('questionDisplay').innerHTML = `<div class="question-number">질문 없음</div><div class="question-text">선택한 카테고리에 질문이 없습니다.</div>`;
+                return;
+            }
+            currentQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+            document.getElementById('questionDisplay').innerHTML = `<div class="question-number">질문 (${getQuestionCategory(currentQuestion, true)})</div><div class="question-text">${currentQuestion}</div>`;
+            resetTimer();
+            clearTranscription();
+        }
+
+        function getQuestionCategory(question, returnName = false) {
+            for (const [categoryId, questionList] of Object.entries(questions)) {
+                if (questionList.includes(question)) return returnName ? (categories[categoryId] || categoryId) : categoryId;
+            }
+            return returnName ? '기타' : 'unknown';
+        }
+
+        async function saveAnswer() {
+            const transcription = document.getElementById('transcriptionText').value.trim();
+            if (!currentQuestion) {
+                if (!isInFocusMode) showStatus('질문을 먼저 선택해주세요.', 'error');
+                return;
+            }
+            if (!transcription && !currentAudioBlob) { // 텍스트도 없고 녹음된 오디오도 없으면 저장 안함
+                if (!isInFocusMode) showStatus('답변 내용이 비어있습니다.', 'error');
+                return;
+            }
             
-            // 재생 완료 시 버튼 텍스트 원래대로
-            audio.onended = () => {
-                buttonElement.textContent = '▶️ 재생';
-                buttonElement.onclick = () => playAudio(audioData, buttonElement);
-                audio.remove();
+            let audioData = null;
+            if (audioRecordingEnabled && currentAudioBlob) {
+                try {
+                    audioData = await blobToBase64(currentAudioBlob);
+                } catch (error) {
+                    console.error('Failed to convert audio:', error);
+                }
+            }
+            
+            const answer = {
+                id: Date.now(),
+                question: currentQuestion,
+                answer: transcription,
+                duration: seconds,
+                timestamp: new Date().toISOString(),
+                category: getQuestionCategory(currentQuestion, true),
+                audioData: audioData
             };
             
-        } catch (error) {
-            console.error('Play error:', error);
-            showStatus('오디오 재생 중 오류가 발생했습니다.', 'error');
-        }
-    }
-
-    function pauseAudio(audio, buttonElement, audioData) {
-        audio.pause();
-        buttonElement.textContent = '▶️ 재생';
-        buttonElement.onclick = () => resumeAudio(audio, buttonElement, audioData);
-    }
-
-    function resumeAudio(audio, buttonElement, audioData) {
-        audio.play();
-        buttonElement.textContent = '⏸️ 일시정지';
-        buttonElement.onclick = () => pauseAudio(audio, buttonElement, audioData);
-    }
-
-    // --- 기타 유틸리티 함수 ---
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab.active, .tab-content.active').forEach(el => el.classList.remove('active'));
-        const clickedTab = Array.from(document.querySelectorAll('.tab')).find(tab => tab.getAttribute('onclick').includes(`'${tabName}'`));
-        if(clickedTab) clickedTab.classList.add('active');
-        document.getElementById(tabName + '-tab').classList.add('active');
-        if (tabName === 'answers') updateAnswerList();
-        updateAllUIs();
-    }
-    
-    function updateCategorySelectors() {
-        const selectors = [document.getElementById('categorySelect'), document.getElementById('questionCategory')];
-        const categoryOptions = Object.entries(categories).map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
-        selectors.forEach(selector => {
-            if (selector) {
-                const currentVal = selector.value;
-                selector.innerHTML = selector.id === 'categorySelect' ? '<option value="all">전체</option>' + categoryOptions : categoryOptions;
-                selector.value = currentVal;
+            answers.unshift(answer);
+            saveAnswersToStorage();
+            updateAllUIs();
+            if (!isInFocusMode) {
+                showStatus('답변이 저장되었습니다!', 'success');
             }
-        });
-    }
-
-    function startTimer() {
-        if (timerInterval) return;
-        timerInterval = setInterval(() => {
-            seconds++;
-            updateTimerDisplay();
-        }, 1000);
-    }
-
-    function stopTimer() {
-        if (timerInterval) clearInterval(timerInterval);
-        timerInterval = null;
-    }
-
-    function resetTimer() {
-        stopTimer();
-        seconds = 0;
-        updateTimerDisplay();
-    }
-
-    function updateTimerDisplay() {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        document.getElementById('timer').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-
-    function getNewQuestion() {
-        const category = document.getElementById('categorySelect').value;
-        const availableQuestions = category === 'all' ? Object.values(questions).flat() : questions[category] || [];
-        if (availableQuestions.length === 0) {
-            showStatus('선택한 카테고리에 질문이 없습니다.', 'error');
-            currentQuestion = null;
-            document.getElementById('questionDisplay').innerHTML = `<div class="question-number">질문 없음</div><div class="question-text">선택한 카테고리에 질문이 없습니다.</div>`;
-            return;
+            clearTranscription();
+            resetTimer();
+            
+            currentAudioBlob = null;
         }
-        currentQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
-        document.getElementById('questionDisplay').innerHTML = `<div class="question-number">질문 (${getQuestionCategory(currentQuestion, true)})</div><div class="question-text">${currentQuestion}</div>`;
-        resetTimer();
-        clearTranscription();
-    }
 
-    function getQuestionCategory(question, returnName = false) {
-        for (const [categoryId, questionList] of Object.entries(questions)) {
-            if (questionList.includes(question)) return returnName ? (categories[categoryId] || categoryId) : categoryId;
-        }
-        return returnName ? '기타' : 'unknown';
-    }
+        function clearTranscription() { document.getElementById('transcriptionText').value = ''; }
 
-    async function saveAnswer() {
-        const transcription = document.getElementById('transcriptionText').value.trim();
-        if (!currentQuestion) {
-            if (!isInFocusMode) showStatus('질문을 먼저 선택해주세요.', 'error');
-            return;
-        }
-        if (!transcription) {
-            if (!isInFocusMode) showStatus('답변 내용이 비어있습니다.', 'error');
-            return;
-        }
-        
-        // 오디오 데이터 처리
-        let audioData = null;
-        if (audioRecordingEnabled && currentAudioBlob) {
-            try {
-                audioData = await blobToBase64(currentAudioBlob);
-            } catch (error) {
-                console.error('Failed to convert audio:', error);
+        function updateRecentAnswers() {
+            const container = document.getElementById('recentAnswers');
+            const recent = answers.slice(0, 5);
+            if (recent.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>아직 저장된 답변이 없습니다.</p></div>';
+                return;
             }
-        }
-        
-        const answer = {
-            id: Date.now(),
-            question: currentQuestion,
-            answer: transcription,
-            duration: seconds,
-            timestamp: new Date().toISOString(),
-            category: getQuestionCategory(currentQuestion, true),
-            audioData: audioData // 오디오 데이터 추가
-        };
-        
-        answers.unshift(answer);
-        saveAnswersToStorage();
-        updateAllUIs();
-        if (!isInFocusMode) {
-            showStatus('답변이 저장되었습니다!', 'success');
-        }
-        clearTranscription();
-        resetTimer();
-        
-        // 오디오 데이터 정리
-        currentAudioBlob = null;
-    }
-
-    function clearTranscription() { document.getElementById('transcriptionText').value = ''; }
-
-    function updateRecentAnswers() {
-        const container = document.getElementById('recentAnswers');
-        const recent = answers.slice(0, 5);
-        if (recent.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>아직 저장된 답변이 없습니다.</p></div>';
-            return;
-        }
-        container.innerHTML = recent.map(answer => `
-            <div class="answer-card">
-                <div class="answer-question">${answer.question}</div>
-                <div class="answer-meta">${answer.category} | ${Math.floor(answer.duration / 60)}분 ${answer.duration % 60}초</div>
-            </div>
-        `).join('');
-    }
-
-    function updateAnswerList() {
-        const container = document.getElementById('answerList');
-        const searchTerm = document.getElementById('answerSearch')?.value.toLowerCase() || '';
-        const filtered = answers.filter(a => !searchTerm || a.question.toLowerCase().includes(searchTerm) || a.answer.toLowerCase().includes(searchTerm));
-        if (filtered.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>저장된 답변이 없습니다.</p></div>';
-            return;
-        }
-        container.innerHTML = filtered.map((answer, index) => {
-            const audioButtons = answer.audioData 
-                ? `<button class="btn-secondary btn-small" id="playBtn_${index}" onclick="playAudio('${answer.audioData.replace(/'/g, "\\'")}', this)">▶️ 재생</button>
-                   <button class="btn-secondary btn-small" onclick="downloadAudio('${answer.audioData.replace(/'/g, "\\'")}', '${answer.timestamp}')">💾 다운로드</button>` 
-                : '';
-            return `
-            <div class="answer-card">
-                <div class="answer-question">${answer.question}</div>
-                <div class="answer-meta">카테고리: ${answer.category} | 시간: ${Math.floor(answer.duration / 60)}분 ${answer.duration % 60}초 | ${new Date(answer.timestamp).toLocaleString('ko-KR')}</div>
-                <div class="answer-text">${answer.answer.replace(/\n/g, '<br>')}</div>
-                <div class="answer-actions">
-                    ${audioButtons}
-                    <button class="btn-danger btn-small" onclick="deleteAnswer(${answer.id})">삭제</button>
+            container.innerHTML = recent.map(answer => `
+                <div class="answer-card">
+                    <div class="answer-question">${answer.question}</div>
+                    <div class="answer-meta">${answer.category} | ${Math.floor(answer.duration / 60)}분 ${answer.duration % 60}초</div>
                 </div>
-            </div>
-            `;
-        }).join('');
-    }
-
-    function filterAnswers() { updateAnswerList(); }
-
-    function deleteAnswer(id) {
-        if (confirm('이 답변을 삭제하시겠습니까?')) {
-            answers = answers.filter(a => a.id !== id);
-            saveAnswersToStorage();
-            updateAnswerList();
-            updateAllUIs();
-            showStatus('답변이 삭제되었습니다.', 'info');
+            `).join('');
         }
-    }
 
-    function clearAllAnswers() {
-        if (answers.length > 0 && confirm('모든 답변 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
-            answers = [];
-            saveAnswersToStorage();
-            updateAnswerList();
-            updateAllUIs();
-            showStatus('모든 답변이 삭제되었습니다.', 'info');
+        function updateAnswerList() {
+            const container = document.getElementById('answerList');
+            const searchTerm = document.getElementById('answerSearch')?.value.toLowerCase() || '';
+            const filtered = answers.filter(a => !searchTerm || a.question.toLowerCase().includes(searchTerm) || a.answer.toLowerCase().includes(searchTerm));
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>저장된 답변이 없습니다.</p></div>';
+                return;
+            }
+            container.innerHTML = filtered.map((answer, index) => {
+                const audioButtons = answer.audioData 
+                    ? `<button class="btn-secondary btn-small" id="playBtn_${index}" onclick="playAudio('${answer.audioData.replace(/'/g, "\\'")}', this)">▶️ 재생</button>
+                    <button class="btn-secondary btn-small" onclick="downloadAudio('${answer.audioData.replace(/'/g, "\\'")}', '${answer.timestamp}')">💾 다운로드</button>` 
+                    : '';
+                return `
+                <div class="answer-card">
+                    <div class="answer-question">${answer.question}</div>
+                    <div class="answer-meta">카테고리: ${answer.category} | 시간: ${Math.floor(answer.duration / 60)}분 ${answer.duration % 60}초 | ${new Date(answer.timestamp).toLocaleString('ko-KR')}</div>
+                    <div class="answer-text">${answer.answer.replace(/\n/g, '<br>')}</div>
+                    <div class="answer-actions">
+                        ${audioButtons}
+                        <button class="btn-danger btn-small" onclick="deleteAnswer(${answer.id})">삭제</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
         }
-    }
 
-    function exportAnswers() {
-        if (answers.length === 0) {
-            showStatus('내보낼 답변이 없습니다.', 'error');
-            return;
-        }
-        const dataStr = JSON.stringify(answers, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `interview-answers-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
+        function filterAnswers() { updateAnswerList(); }
 
-    function importAnswers(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const imported = JSON.parse(e.target.result);
-                if (!Array.isArray(imported)) throw new Error("Invalid format");
-                if (confirm('기존 답변을 덮어쓰시겠습니까? (취소하면 기존 답변에 추가됩니다)')) answers = imported;
-                else answers = [...answers, ...imported];
+        function deleteAnswer(id) {
+            if (confirm('이 답변을 삭제하시겠습니까?')) {
+                answers = answers.filter(a => a.id !== id);
                 saveAnswersToStorage();
                 updateAnswerList();
                 updateAllUIs();
-                showStatus(`${imported.length}개의 답변을 가져왔습니다.`, 'success');
-            } catch (error) { showStatus('파일을 읽는 중 오류가 발생했습니다.', 'error'); }
-        };
-        reader.readAsText(file);
-        event.target.value = '';
-    }
-
-    function updateStats() {
-        const totalQuestions = Object.values(questions).reduce((sum, list) => sum + list.length, 0);
-        const categoryCount = Object.keys(categories).length;
-        const totalAnswers = answers.length;
-        const totalTime = answers.reduce((sum, a) => sum + a.duration, 0);
-        const stats = {
-            statsQuestionsCount: totalQuestions,
-            statsCategoryCount: categoryCount,
-            statsAnswersCount: totalAnswers,
-            statsPracticeTime: Math.round(totalTime / 60),
-        };
-        for (const [id, value] of Object.entries(stats)) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = value;
+                showStatus('답변이 삭제되었습니다.', 'info');
+            }
         }
-    }
 
-    function showStatus(message, type) {
-        const statusDiv = document.getElementById('statusMessage');
-        statusDiv.className = `status-message status-${type}`;
-        statusDiv.textContent = message;
-        setTimeout(() => {
-            statusDiv.textContent = '';
-            statusDiv.className = '';
-        }, 5000);
-    }
-
-    // --- 집중 모드 관련 함수들 ---
-    function enterFocusMode() {
-        const container = document.getElementById('focusModeContainer');
-        container.classList.add('active');
-        isInFocusMode = true;
-
-        const mainCategorySelect = document.getElementById('categorySelect');
-        const focusCategorySelect = document.getElementById('focusCategorySelect');
-        focusCategorySelect.innerHTML = mainCategorySelect.innerHTML;
-        focusCategorySelect.value = mainCategorySelect.value;
-        
-        resetFocusMode();
-        clearTranscription();
-    }
-
-    function exitFocusMode() {
-        if (isRecording) stopRecording();
-        const container = document.getElementById('focusModeContainer');
-        container.classList.remove('active');
-        isInFocusMode = false;
-        resetFocusMode();
-    }
-    document.getElementById('exitFocusBtn').addEventListener('click', exitFocusMode);
-
-    function resetFocusMode() {
-        focusState = 'idle';
-        document.getElementById('focus-question-text').textContent = '집중 모드를 시작하려면 중앙의 원을 클릭하세요.';
-        document.getElementById('focus-status-text').textContent = '';
-        const circle = document.getElementById('focus-circle');
-        circle.classList.remove('waiting', 'listening');
-    }
-
-    function speak(text, callback) {
-        if (!('speechSynthesis' in window)) {
-            alert('이 브라우저는 음성 합성을 지원하지 않습니다.');
-            if (callback) callback();
-            return;
+        function clearAllAnswers() {
+            if (answers.length > 0 && confirm('모든 답변 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                answers = [];
+                saveAnswersToStorage();
+                updateAnswerList();
+                updateAllUIs();
+                showStatus('모든 답변이 삭제되었습니다.', 'info');
+            }
         }
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        if (koreanVoice) {
-            utterance.voice = koreanVoice;
-        }
-        utterance.lang = 'ko-KR';
-        utterance.rate = 1.0;
-        utterance.onend = () => {
-            if (callback) callback();
-        };
-        window.speechSynthesis.speak(utterance);
-    }
 
-    function startFocusModeQuestion() {
-        if (focusState !== 'idle') return;
-        clearTranscription();
-        resetTimer();
-
-        const category = document.getElementById('focusCategorySelect').value;
-        const availableQuestions = category === 'all' ? Object.values(questions).flat() : questions[category] || [];
-        if (availableQuestions.length === 0) {
-            document.getElementById('focus-question-text').textContent = '선택한 카테고리에 질문이 없습니다.';
-            return;
-        }
-        currentQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
-        document.getElementById('focus-question-text').textContent = currentQuestion;
-
-        focusState = 'waiting';
-        document.getElementById('focus-status-text').textContent = '질문을 들어보세요...';
-        
-        speak(currentQuestion, () => {
-            const circle = document.getElementById('focus-circle');
-            circle.classList.add('waiting');
-            document.getElementById('focus-status-text').textContent = '답변을 준비하세요...';
-            startTimer();
-
-            setTimeout(() => {
-                circle.classList.remove('waiting');
-                circle.classList.add('listening');
-                document.getElementById('focus-status-text').textContent = '듣고 있습니다...';
-                startRecording();
-                focusState = 'listening';
-            }, FOCUS_DELAY);
-        });
-    }
-
-    function stopAndSaveAnswer() {
-        if (focusState !== 'listening') return;
-        
-        focusState = 'processing';
-        document.getElementById('focus-status-text').textContent = '답변을 처리 중입니다...';
-        
-        stopTimer();
-        stopRecording();
-
-        setTimeout(() => {
-            saveAnswer();
-            document.getElementById('focus-status-text').textContent = '답변이 저장되었습니다. 다시 시작하려면 원을 클릭하세요.';
-            focusState = 'idle';
-            document.getElementById('focus-circle').classList.remove('listening');
-        }, 1000);
-    }
-
-    document.getElementById('focus-circle').addEventListener('click', () => {
-        if (focusState === 'idle') {
-            startFocusModeQuestion();
-        } else if (focusState === 'listening') {
-            stopAndSaveAnswer();
-        }
-    });
-
-    // --- 프리셋 관리 함수들 ---
-    function loadPresetsFromStorage() {
-        const saved = localStorage.getItem('interviewPresets');
-        presets = saved ? JSON.parse(saved) : [];
-        updatePresetUI();
-    }
-
-    function savePresetsToStorage() {
-        localStorage.setItem('interviewPresets', JSON.stringify(presets));
-        updatePresetUI();
-    }
-
-    function updatePresetUI() {
-        const container = document.getElementById('presetCardsContainer');
-        if (!container) return;
-        
-        if (presets.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>저장된 프리셋이 없습니다. 위에서 새 프리셋을 저장하세요.</p></div>';
-            return;
-        }
-        
-        container.innerHTML = '<div class="preset-cards">' + presets.map((preset, index) => {
-            const date = new Date(preset.timestamp);
-            const dateStr = date.toLocaleString('ko-KR', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            const questionCount = Object.values(preset.questions).reduce((sum, list) => sum + list.length, 0);
-            const categoryCount = Object.keys(preset.categories).length;
-            
-            return `
-                <div class="preset-card" onclick="quickLoadPreset(${index})">
-                    <div class="preset-card-header">
-                        <div class="preset-card-title">⭐ ${preset.name}</div>
-                    </div>
-                    <div class="preset-card-meta">
-                        📚 ${questionCount}개 질문 | 📂 ${categoryCount}개 카테고리<br>
-                        🕐 ${dateStr}
-                    </div>
-                    <div class="preset-card-actions" onclick="event.stopPropagation()">
-                        <button class="btn-secondary btn-small" onclick="quickLoadPreset(${index})">불러오기</button>
-                        <button class="btn-secondary btn-small" onclick="quickRenamePreset(${index})">이름 변경</button>
-                        <button class="btn-danger btn-small" onclick="quickDeletePreset(${index})">삭제</button>
-                    </div>
-                </div>
-            `;
-        }).join('') + '</div>';
-    }
-
-    function quickSavePreset() {
-        const nameInput = document.getElementById('newPresetName');
-        const name = nameInput.value.trim();
-        
-        if (!name) {
-            showStatus('프리셋 이름을 입력하세요.', 'error');
-            nameInput.focus();
-            return;
-        }
-        
-        // 중복 이름 체크
-        if (presets.some(p => p.name === name)) {
-            if (!confirm(`'${name}' 프리셋이 이미 존재합니다. 덮어쓰시겠습니까?`)) {
+        function exportAnswers() {
+            if (answers.length === 0) {
+                showStatus('내보낼 답변이 없습니다.', 'error');
                 return;
             }
-            // 기존 프리셋 삭제
-            const existingIndex = presets.findIndex(p => p.name === name);
-            presets.splice(existingIndex, 1);
+            const dataStr = JSON.stringify(answers, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `interview-answers-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
         }
-        
-        const preset = {
-            name: name,
-            categories: JSON.parse(JSON.stringify(categories)),
-            questions: JSON.parse(JSON.stringify(questions)),
-            timestamp: new Date().toISOString()
-        };
-        
-        presets.push(preset);
-        savePresetsToStorage();
-        nameInput.value = '';
-        showStatus(`프리셋 '${name}'이(가) 저장되었습니다!`, 'success');
-    }
 
-    function quickLoadPreset(index) {
-        const preset = presets[index];
-        
-        if (!confirm(`'${preset.name}' 프리셋을 불러오시겠습니까?\n\n현재 질문 데이터베이스가 교체됩니다.\n(답변 기록은 유지됩니다)`)) {
-            return;
+        function importAnswers(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!Array.isArray(imported)) throw new Error("Invalid format");
+                    if (confirm('기존 답변을 덮어쓰시겠습니까? (취소하면 기존 답변에 추가됩니다)')) answers = imported;
+                    else answers = [...answers, ...imported];
+                    saveAnswersToStorage();
+                    updateAnswerList();
+                    updateAllUIs();
+                    showStatus(`${imported.length}개의 답변을 가져왔습니다.`, 'success');
+                } catch (error) { showStatus('파일을 읽는 중 오류가 발생했습니다.', 'error'); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
         }
-        
-        categories = JSON.parse(JSON.stringify(preset.categories));
-        questions = JSON.parse(JSON.stringify(preset.questions));
-        
-        saveDataToStorage();
-        updateCategorySelectors();
-        updateAllUIs();
-        showStatus(`프리셋 '${preset.name}'을(를) 불러왔습니다!`, 'success');
-    }
 
-    function quickDeletePreset(index) {
-        const preset = presets[index];
-        
-        if (!confirm(`'${preset.name}' 프리셋을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
-            return;
+        function updateStats() {
+            const totalQuestions = Object.values(questions).reduce((sum, list) => sum + list.length, 0);
+            const categoryCount = Object.keys(categories).length;
+            const totalAnswers = answers.length;
+            const totalTime = answers.reduce((sum, a) => sum + a.duration, 0);
+            const stats = {
+                statsQuestionsCount: totalQuestions,
+                statsCategoryCount: categoryCount,
+                statsAnswersCount: totalAnswers,
+                statsPracticeTime: Math.round(totalTime / 60),
+            };
+            for (const [id, value] of Object.entries(stats)) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = value;
+            }
         }
-        
-        presets.splice(index, 1);
-        savePresetsToStorage();
-        showStatus('프리셋이 삭제되었습니다.', 'info');
-    }
 
-    function quickRenamePreset(index) {
-        const preset = presets[index];
-        const newName = prompt('새 이름을 입력하세요:', preset.name);
-        
-        if (!newName || newName.trim() === '') return;
-        
-        // 중복 이름 체크 (자기 자신 제외)
-        if (presets.some((p, i) => i !== index && p.name === newName.trim())) {
-            alert('이미 존재하는 프리셋 이름입니다.');
-            return;
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.textContent = message;
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = '';
+            }, 5000);
         }
-        
-        preset.name = newName.trim();
-        savePresetsToStorage();
-        showStatus('프리셋 이름이 변경되었습니다.', 'success');
-    }
 
-    // 이전 함수들은 하위 호환성을 위해 유지
-    function saveAsPreset() {
-        const name = prompt('프리셋 이름을 입력하세요:');
-        if (!name || name.trim() === '') return;
-        
-        const preset = {
-            name: name.trim(),
-            categories: JSON.parse(JSON.stringify(categories)),
-            questions: JSON.parse(JSON.stringify(questions)),
-            timestamp: new Date().toISOString()
-        };
-        
-        presets.push(preset);
-        savePresetsToStorage();
-        showStatus(`프리셋 '${name}'이(가) 저장되었습니다.`, 'success');
-    }
+        // --- 집중 모드 관련 함수들 ---
+        function enterFocusMode() {
+            const container = document.getElementById('focusModeContainer');
+            container.classList.add('active');
+            isInFocusMode = true;
 
-    document.addEventListener('DOMContentLoaded', init);
-    document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); }));
-</script>
+            const mainCategorySelect = document.getElementById('categorySelect');
+            const focusCategorySelect = document.getElementById('focusCategorySelect');
+            focusCategorySelect.innerHTML = mainCategorySelect.innerHTML;
+            focusCategorySelect.value = mainCategorySelect.value;
+            
+            resetFocusMode();
+            clearTranscription();
+        }
+
+        function exitFocusMode() {
+            if (isRecording) stopRecording();
+            const container = document.getElementById('focusModeContainer');
+            container.classList.remove('active');
+            isInFocusMode = false;
+            resetFocusMode();
+        }
+        document.getElementById('exitFocusBtn').addEventListener('click', exitFocusMode);
+
+        function resetFocusMode() {
+            focusState = 'idle';
+            document.getElementById('focus-question-text').textContent = '집중 모드를 시작하려면 중앙의 원을 클릭하세요.';
+            document.getElementById('focus-status-text').textContent = '';
+            const circle = document.getElementById('focus-circle');
+            circle.classList.remove('waiting', 'listening');
+        }
+
+        function speak(text, callback) {
+            if (!('speechSynthesis' in window)) {
+                alert('이 브라우저는 음성 합성을 지원하지 않습니다.');
+                if (callback) callback();
+                return;
+            }
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            if (koreanVoice) {
+                utterance.voice = koreanVoice;
+            }
+            utterance.lang = 'ko-KR';
+            utterance.rate = 1.0;
+            utterance.onend = () => {
+                if (callback) callback();
+            };
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function startFocusModeQuestion() {
+            if (focusState !== 'idle') return;
+            clearTranscription();
+            resetTimer();
+
+            const category = document.getElementById('focusCategorySelect').value;
+            const availableQuestions = category === 'all' ? Object.values(questions).flat() : questions[category] || [];
+            if (availableQuestions.length === 0) {
+                document.getElementById('focus-question-text').textContent = '선택한 카테고리에 질문이 없습니다.';
+                return;
+            }
+            currentQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+            document.getElementById('focus-question-text').textContent = currentQuestion;
+
+            focusState = 'waiting';
+            document.getElementById('focus-status-text').textContent = '질문을 들어보세요...';
+            
+            speak(currentQuestion, () => {
+                const circle = document.getElementById('focus-circle');
+                circle.classList.add('waiting');
+                document.getElementById('focus-status-text').textContent = '답변을 준비하세요...';
+                startTimer();
+
+                setTimeout(() => {
+                    circle.classList.remove('waiting');
+                    circle.classList.add('listening');
+                    document.getElementById('focus-status-text').textContent = '듣고 있습니다...';
+                    startRecording();
+                    focusState = 'listening';
+                }, FOCUS_DELAY);
+            });
+        }
+
+        function stopAndSaveAnswer() {
+            if (focusState !== 'listening') return;
+            
+            focusState = 'processing';
+            document.getElementById('focus-status-text').textContent = '답변을 처리 중입니다...';
+            
+            stopTimer();
+            stopRecording();
+
+            setTimeout(() => {
+                saveAnswer();
+                document.getElementById('focus-status-text').textContent = '답변이 저장되었습니다. 다시 시작하려면 원을 클릭하세요.';
+                focusState = 'idle';
+                document.getElementById('focus-circle').classList.remove('listening');
+            }, 1000);
+        }
+
+        document.getElementById('focus-circle').addEventListener('click', () => {
+            if (focusState === 'idle') {
+                startFocusModeQuestion();
+            } else if (focusState === 'listening') {
+                stopAndSaveAnswer();
+            }
+        });
+
+        // --- 프리셋 관리 함수들 ---
+        function loadPresetsFromStorage() {
+            const saved = localStorage.getItem('interviewPresets');
+            presets = saved ? JSON.parse(saved) : [];
+            updatePresetUI();
+        }
+
+        function savePresetsToStorage() {
+            localStorage.setItem('interviewPresets', JSON.stringify(presets));
+            updatePresetUI();
+        }
+
+        function updatePresetUI() {
+            const container = document.getElementById('presetCardsContainer');
+            if (!container) return;
+            
+            if (presets.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>저장된 프리셋이 없습니다. 위에서 새 프리셋을 저장하세요.</p></div>';
+                return;
+            }
+            
+            container.innerHTML = '<div class="preset-cards">' + presets.map((preset, index) => {
+                const date = new Date(preset.timestamp);
+                const dateStr = date.toLocaleString('ko-KR', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const questionCount = Object.values(preset.questions).reduce((sum, list) => sum + list.length, 0);
+                const categoryCount = Object.keys(preset.categories).length;
+                
+                return `
+                    <div class="preset-card" onclick="quickLoadPreset(${index})">
+                        <div class="preset-card-header">
+                            <div class="preset-card-title">⭐ ${preset.name}</div>
+                        </div>
+                        <div class="preset-card-meta">
+                            📚 ${questionCount}개 질문 | 📂 ${categoryCount}개 카테고리<br>
+                            🕐 ${dateStr}
+                        </div>
+                        <div class="preset-card-actions" onclick="event.stopPropagation()">
+                            <button class="btn-secondary btn-small" onclick="quickLoadPreset(${index})">불러오기</button>
+                            <button class="btn-secondary btn-small" onclick="quickRenamePreset(${index})">이름 변경</button>
+                            <button class="btn-danger btn-small" onclick="quickDeletePreset(${index})">삭제</button>
+                        </div>
+                    </div>
+                `;
+            }).join('') + '</div>';
+        }
+
+        function quickSavePreset() {
+            const nameInput = document.getElementById('newPresetName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                showStatus('프리셋 이름을 입력하세요.', 'error');
+                nameInput.focus();
+                return;
+            }
+            
+            if (presets.some(p => p.name === name)) {
+                if (!confirm(`'${name}' 프리셋이 이미 존재합니다. 덮어쓰시겠습니까?`)) {
+                    return;
+                }
+                const existingIndex = presets.findIndex(p => p.name === name);
+                presets.splice(existingIndex, 1);
+            }
+            
+            const preset = {
+                name: name,
+                categories: JSON.parse(JSON.stringify(categories)),
+                questions: JSON.parse(JSON.stringify(questions)),
+                timestamp: new Date().toISOString()
+            };
+            
+            presets.push(preset);
+            savePresetsToStorage();
+            nameInput.value = '';
+            showStatus(`프리셋 '${name}'이(가) 저장되었습니다!`, 'success');
+        }
+
+        function quickLoadPreset(index) {
+            const preset = presets[index];
+            
+            if (!confirm(`'${preset.name}' 프리셋을 불러오시겠습니까?\n\n현재 질문 데이터베이스가 교체됩니다.\n(답변 기록은 유지됩니다)`)) {
+                return;
+            }
+            
+            categories = JSON.parse(JSON.stringify(preset.categories));
+            questions = JSON.parse(JSON.stringify(preset.questions));
+            
+            saveDataToStorage();
+            updateCategorySelectors();
+            updateAllUIs();
+            showStatus(`프리셋 '${preset.name}'을(를) 불러왔습니다!`, 'success');
+        }
+
+        function quickDeletePreset(index) {
+            const preset = presets[index];
+            
+            if (!confirm(`'${preset.name}' 프리셋을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
+                return;
+            }
+            
+            presets.splice(index, 1);
+            savePresetsToStorage();
+            showStatus('프리셋이 삭제되었습니다.', 'info');
+        }
+
+        function quickRenamePreset(index) {
+            const preset = presets[index];
+            const newName = prompt('새 이름을 입력하세요:', preset.name);
+            
+            if (!newName || newName.trim() === '') return;
+            
+            if (presets.some((p, i) => i !== index && p.name === newName.trim())) {
+                alert('이미 존재하는 프리셋 이름입니다.');
+                return;
+            }
+            
+            preset.name = newName.trim();
+            savePresetsToStorage();
+            showStatus('프리셋 이름이 변경되었습니다.', 'success');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+        document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); }));
+    </script>
 </body>
 </html>
