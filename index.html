@@ -312,6 +312,9 @@
             transition: all 0.2s ease;
             cursor: pointer;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .preset-card:hover {
@@ -319,6 +322,16 @@
             box-shadow: 0 4px 12px rgba(201, 127, 102, 0.15);
             transform: translateY(-2px);
         }
+        
+        .preset-card.active {
+            border-color: #c97f66;
+            box-shadow: 0 0 0 3px rgba(201, 127, 102, 0.2);
+        }
+        
+        .preset-card.active:hover {
+            transform: translateY(0);
+        }
+
 
         .preset-card-header {
             display: flex;
@@ -342,9 +355,12 @@
         }
 
         .preset-card-actions {
-            display: flex;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #f0ede8;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
-            flex-wrap: wrap;
         }
 
         .preset-save-section {
@@ -733,6 +749,12 @@
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: modal-fade-in 0.3s ease;
+        }
+        
+        @keyframes modal-fade-in {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .modal-header {
@@ -767,6 +789,10 @@
         .close-btn:hover {
             background: #f3f4f6;
             color: #374151;
+        }
+
+        .modal-body {
+            padding: 24px;
         }
 
         .modal form {
@@ -808,6 +834,18 @@
             border-color: #c97f66;
             box-shadow: 0 0 0 3px rgba(201, 127, 102, 0.1);
         }
+
+        .modal-footer {
+            padding: 16px 24px;
+            background: #f9fafb;
+            border-top: 1px solid #e8e5e0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+
 
         .status-message {
             padding: 12px 16px;
@@ -852,39 +890,60 @@
         }
 
         @media (max-width: 768px) {
+            .header, .tabs {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
             .header h1 {
                 font-size: 1.1em;
             }
-            
+            .tab-content {
+                padding: 24px 20px;
+            }
             .btn-secondary {
                 font-size: 0.85em;
                 padding: 8px 12px;
             }
-            
             .practice-layout {
                 grid-template-columns: 1fr;
             }
-
             .tabs {
                 overflow-x: auto;
-                padding: 0 20px;
             }
-
             .tab {
                 white-space: nowrap;
             }
-
             .manager-header {
                 flex-direction: column;
                 align-items: stretch;
             }
-
             .manager-controls {
                 width: 100%;
             }
-
-            .manager-controls button {
+            .manager-controls button,
+            .manager-controls .file-input-wrapper {
                 flex: 1;
+            }
+            .manager-controls .file-input-wrapper button {
+                width: 100%;
+            }
+            #focus-question-text {
+                font-size: 1.5em;
+            }
+            .preset-card-actions {
+                display: flex;
+                flex-direction: column;
+            }
+            .preset-card-actions button {
+                width: 100%;
+            }
+            .accordion-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .category-list-item .category-name-badge {
+                display: none;
             }
         }
         
@@ -1050,12 +1109,12 @@
         <!-- 질문 관리 탭 -->
         <div id="questions-tab" class="tab-content">
             <div class="manager-header">
-                <h2>전체 데이터베이스 관리</h2>
+                <h2>질문 데이터베이스 관리</h2>
                 <div class="manager-controls">
-                    <button class="btn-secondary" onclick="exportDatabase()">DB 내보내기</button>
+                    <button class="btn-secondary" onclick="exportAllPresets()">전체 프리셋 내보내기</button>
                     <div class="file-input-wrapper">
-                        <input type="file" id="dbImportFile" accept=".json" onchange="importDatabase(event)">
-                        <button class="btn-secondary" onclick="document.getElementById('dbImportFile').click()">DB 가져오기</button>
+                        <input type="file" id="presetImportFile" accept=".json" onchange="importAllPresets(event)">
+                        <button class="btn-secondary" onclick="document.getElementById('presetImportFile').click()">전체 프리셋 가져오기</button>
                     </div>
                 </div>
             </div>
@@ -1063,16 +1122,15 @@
             <!-- 프리셋 관리 섹션 -->
             <div class="management-section">
                 <div class="management-header">
-                    <h3>⭐ 프리셋 관리</h3>
-                    <p>현재 질문 데이터베이스를 프리셋으로 저장하고 불러올 수 있습니다. 저장된 프리셋을 클릭하면 바로 불러옵니다.</p>
+                    <h3>프리셋 관리</h3>
+                    <p>프리셋을 선택하여 연습할 질문 목록을 바꿀 수 있습니다. 질문/카테고리를 수정하면 현재 선택된 프리셋에 자동 저장됩니다.</p>
                 </div>
                 
-                <!-- 새 프리셋 저장 섹션 -->
-                <div class="preset-save-section">
-                    <h4>💾 현재 질문 DB를 새 프리셋으로 저장</h4>
-                    <div class="preset-input-group">
-                        <input type="text" id="newPresetName" placeholder="프리셋 이름을 입력하세요 (예: 면접 기본 질문)" onkeypress="if(event.key==='Enter') quickSavePreset()">
-                        <button class="btn-primary" onclick="quickSavePreset()">저장</button>
+                <div class="controls">
+                    <button class="btn-primary" onclick="addBlankPreset()">+ 빈 프리셋 추가</button>
+                    <div class="file-input-wrapper">
+                         <input type="file" id="singlePresetImportFile" accept=".json" onchange="importSinglePreset(event)">
+                         <button class="btn-secondary" onclick="document.getElementById('singlePresetImportFile').click()">프리셋 파일 불러오기</button>
                     </div>
                 </div>
 
@@ -1084,8 +1142,8 @@
             
             <div class="management-section">
                 <div class="management-header">
-                    <h3>📂 카테고리 관리</h3>
-                    <p>모든 데이터는 브라우저에 자동으로 저장됩니다. 카테고리를 추가, 수정, 삭제하여 질문을 체계적으로 관리하세요.</p>
+                    <h3>카테고리 관리 (현재 프리셋: <span id="currentPresetNameForCategory" style="color: #c97f66; font-weight: bold;"></span>)</h3>
+                    <p>현재 활성화된 프리셋의 카테고리를 관리합니다.</p>
                 </div>
                 <div id="category-list-new">
                     <!-- 자바스크립트로 카테고리 목록이 생성됩니다. -->
@@ -1095,8 +1153,8 @@
 
             <div class="management-section">
                 <div class="management-header">
-                    <h3>📚 질문 관리</h3>
-                    <p>각 카테고리를 클릭하여 펼치거나 접을 수 있습니다. 카테고리별로 질문 데이터를 내보내거나 가져올 수 있습니다.</p>
+                    <h3>질문 관리</h3>
+                    <p>각 카테고리를 클릭하여 펼치거나 접을 수 있습니다.</p>
                 </div>
                 <div id="question-accordion-list">
                     <!-- 자바스크립트로 아코디언 목록이 생성됩니다. -->
@@ -1140,15 +1198,15 @@
 
         <!-- 통계 탭 -->
         <div id="stats-tab" class="tab-content">
-            <h2 style="margin-bottom: 24px; font-size: 1.5em;">📊 연습 통계</h2>
+            <h2 style="margin-bottom: 24px; font-size: 1.5em;">연습 통계</h2>
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-value" id="statsQuestionsCount">0</div>
-                    <div class="stat-label">전체 질문 수</div>
+                    <div class="stat-label">현재 프리셋 질문 수</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="statsCategoryCount">0</div>
-                    <div class="stat-label">카테고리 수</div>
+                    <div class="stat-label">현재 프리셋 카테고리 수</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="statsAnswersCount">0</div>
@@ -1226,64 +1284,62 @@
         <div id="focus-status-text"></div>
     </div>
 
-    <script>
-        const defaultData = {
-            categories: {
-                basic: "기본 질문",
-                academic: "학업/탐구",
-                personality: "인성/가치관",
-                department: "학과/진로",
-                technical: "전공 관련"
-            },
-            questions: {
-                basic: [
-                    "간단하게 자기소개를 해주세요.",
-                    "자신의 장점을 구체적인 사례와 함께 말씀해주세요.",
-                    "자신의 단점은 무엇이고, 이를 극복하기 위해 어떤 노력을 하고 있나요?",
-                    "본 대학교, 본 학과에 지원한 동기는 무엇인가요?",
-                    "마지막으로 하고 싶은 말씀이 있으신가요?",
-                ],
-                academic: [
-                    "고등학교에서 가장 열심히 공부한 과목과 그 이유는 무엇인가요?",
-                    "학생부에서 가장 인상 깊은 탐구활동을 소개해주세요.",
-                    "탐구활동을 하면서 가장 어려웠던 점과 극복 과정을 설명해주세요.",
-                    "학업 성적이 낮은 과목이 있다면 그 이유와 개선 노력을 말씀해주세요.",
-                    "고교 3년간 가장 의미 있었던 활동(성취)은 무엇인가요? 그 이유는 무엇인가요?",
-                    "자신만의 학습 방법이나 시간 관리 노하우가 있나요?"
-                ],
-                personality: [
-                    "리더십을 발휘한 경험이 있나요? 구체적으로 설명해주세요.",
-                    "팀 프로젝트에서 리더 역할을 맡았던 경험을 구체적으로 설명해주세요.",
-                    "리더십과 팔로워십 중 자신은 어느 쪽에 더 가까운가요?",
-                    "갈등 상황에서 어떻게 대처하나요? 구체적인 사례를 들어 설명해주세요.",
-                    "타인과 의견이 다를 때 어떻게 조율하나요?",
-                    "모둠 활동에 제대로 참여하지 않는 친구가 있다면 어떻게 할건가요?",
-                    "친구가 어려움에 처했을 때 도와준 경험이 있나요?",
-                    "실패한 경험과 그로부터 배운 점을 말씀해주세요.",
-                    "지금까지 살아오면서 겪었던 가장 힘들었던 경험은 무엇이고 어떻게 극복했나요?",
-                    "스트레스를 받을 때 어떻게 해소하나요?",
-                    "새로운 환경에 적응하는 자신만의 방법이 있나요?",
-                    "최근에 읽은 책 중 가장 인상 깊었던 책과 그 이유를 말씀해주세요.",
-                    "존경하는 인물이 있다면 누구이며, 그 이유는 무엇인가요?",
-                    "봉사활동 중 가장 기억에 남는 활동이 있나요?",
-                    "가장 중요하게 생각하는 가치관은 무엇인가요?"
-                ],
-                department: [
-                    "대학 입학 후 가장 먼저 하고 싶은 일은 무엇인가요?",
-                    "입학 후 학업계획을 말해주세요.",
-                    "10년 후 자신의 모습은 어떨 것 같나요?",
-                    "졸업 후 진로 계획은 어떻게 되나요?",
-                    "이 학과에서 가장 듣고 싶은 과목은 무엇인가요?",
-                    "이 학과에 지원하기 위해 어떤 노력을 했나요?"
-                ],
-                technical: [],
-            }
-        };
+    <!-- 커스텀 확인 모달 -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 id="confirmModalTitle">확인</h3>
+                <button class="close-btn" onclick="hideConfirmModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmModalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="confirmModalCancelBtn" class="btn-secondary" onclick="hideConfirmModal()">취소</button>
+                <button id="confirmModalConfirmBtn" class="btn-primary">확인</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- 커스텀 프롬프트 모달 -->
+    <div id="promptModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="promptModalTitle">입력</h3>
+                <button class="close-btn" onclick="hidePromptModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="promptModalMessage" style="margin-bottom: 12px;"></p>
+                <input type="text" id="promptModalInput" class="form-group" style="width: 100%;">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="hidePromptModal()">취소</button>
+                <button id="promptModalConfirmBtn" class="btn-primary">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 기본 프리셋 데이터 ---
+        const defaultPresetInterview = {
+            name: "면접용 연습질문",
+            timestamp: new Date().toISOString(),
+            categories: { basic: "기본 질문", academic: "학업/탐구", personality: "인성/가치관", department: "학과/진로", technical: "전공 관련" },
+            questions: { basic: ["간단하게 자기소개를 해주세요.", "자신의 장점을 구체적인 사례와 함께 말씀해주세요.", "자신의 단점은 무엇이고, 이를 극복하기 위해 어떤 노력을 하고 있나요?", "본 대학교, 본 학과에 지원한 동기는 무엇인가요?", "마지막으로 하고 싶은 말씀이 있으신가요?",], academic: ["고등학교에서 가장 열심히 공부한 과목과 그 이유는 무엇인가요?", "학생부에서 가장 인상 깊은 탐구활동을 소개해주세요.", "탐구활동을 하면서 가장 어려웠던 점과 극복 과정을 설명해주세요.", "학업 성적이 낮은 과목이 있다면 그 이유와 개선 노력을 말씀해주세요.", "고교 3년간 가장 의미 있었던 활동(성취)은 무엇인가요? 그 이유는 무엇인가요?", "자신만의 학습 방법이나 시간 관리 노하우가 있나요?"], personality: ["리더십을 발휘한 경험이 있나요? 구체적으로 설명해주세요.", "팀 프로젝트에서 리더 역할을 맡았던 경험을 구체적으로 설명해주세요.", "리더십과 팔로워십 중 자신은 어느 쪽에 더 가까운가요?", "갈등 상황에서 어떻게 대처하나요? 구체적인 사례를 들어 설명해주세요.", "타인과 의견이 다를 때 어떻게 조율하나요?", "모둠 활동에 제대로 참여하지 않는 친구가 있다면 어떻게 할건가요?", "친구가 어려움에 처했을 때 도와준 경험이 있나요?", "실패한 경험과 그로부터 배운 점을 말씀해주세요.", "지금까지 살아오면서 겪었던 가장 힘들었던 경험은 무엇이고 어떻게 극복했나요?", "스트레스를 받을 때 어떻게 해소하나요?", "새로운 환경에 적응하는 자신만의 방법이 있나요?", "최근에 읽은 책 중 가장 인상 깊었던 책과 그 이유를 말씀해주세요.", "존경하는 인물이 있다면 누구이며, 그 이유는 무엇인가요?", "봉사활동 중 가장 기억에 남는 활동이 있나요?", "가장 중요하게 생각하는 가치관은 무엇인가요?"], department: ["대학 입학 후 가장 먼저 하고 싶은 일은 무엇인가요?", "입학 후 학업계획을 말해주세요.", "10년 후 자신의 모습은 어떨 것 같나요?", "졸업 후 진로 계획은 어떻게 되나요?", "이 학과에서 가장 듣고 싶은 과목은 무엇인가요?", "이 학과에 지원하기 위해 어떤 노력을 했나요?"], technical: [], }
+        };
+        const defaultPresetDaily = {
+            name: "일상용 연습질문",
+            timestamp: new Date().toISOString(),
+            categories: { ice_breaking: "가볍게 시작하기 (아이스브레이킹)", daily_life: "일상과 취미", preferences: "취향과 생각", imagination: "상상과 가정", reflection: "가벼운 회고와 기대" },
+            questions: { ice_breaking: ["오늘 하루 어땠나요?", "여기까지 어떻게 오셨어요? 오는 길에 재미있는 일은 없었나요?", "요즘 가장 많이 듣는 노래는 무엇인가요?", "아침에 일어나서 가장 먼저 하는 일은 무엇인가요?", "지금 가장 먹고 싶은 음식이 있다면요?", "최근에 가장 크게 웃었던 적은 언제인가요?", "지금 기분은 어떠신가요?", "오늘 아침 식사는 무엇을 하셨나요?", "오늘 날씨 어떤가요? 날씨 때문에 기분이 영향 받는 편인가요?", "지금 입고 있는 옷 중에서 가장 마음에 드는 아이템은 무엇인가요?", "오늘 집 나오기 전에 가장 마지막으로 한 행동은 뭐였나요?", "이번 주에 가장 기대되는 일이 있나요?", "최근에 새로 시도해본 것이 있나요?", "요즘 가장 자주 쓰는 이모티콘이나 밈은 무엇인가요?", "아침형 인간인가요, 저녁형 인간인가요?", "오늘 아침에 꾼 꿈 기억나시나요?", "지금 이 순간 창밖을 보면 무엇이 보이나요?", "오늘 제일 먼저 만난 사람은 누구였나요?", "요즘 가장 자주 하는 생각은 무엇인가요?", "출근길/등교길에 주로 무엇을 하면서 시간을 보내나요?", "커피 vs 차, 오늘은 어느 쪽 기분인가요?", "주머니나 가방에 항상 가지고 다니는 물건이 있나요?", "오늘 가장 기억에 남는 대화가 있었나요?", "지금 핸드폰 배경화면은 무엇인가요?", "오늘 하루 중 가장 좋았던 순간은 언제였나요?"], daily_life: ["학교에서 가장 좋아하는 시간은 언제인가요? (점심시간, 특정 수업, 쉬는 시간 등)", "스트레스 받을 때 보통 어떻게 푸는 편인가요?", "주말에는 보통 무엇을 하면서 시간을 보내나요?", "가장 친한 친구에게 나를 소개해달라고 한다면, 뭐라고 할 것 같나요?", "요즘 새롭게 빠져있는 취미나 관심사가 있나요?", "나만의 '소확행'(소소하지만 확실한 행복)은 무엇인가요?", "공부하기 싫을 때 자신을 다독이는 특별한 방법이 있나요?", "하루 중 언제가 가장 기분이 좋은가요?", "잠들기 전 루틴이 있나요?", "점심시간에 주로 누구와 함께 시간을 보내나요?", "방 청소는 얼마나 자주 하는 편인가요?", "좋아하는 과목과 싫어하는 과목, 그리고 그 이유는?", "학원이나 도서관보다 집에서 공부하는 걸 선호하나요?", "휴대폰 사용 시간은 하루에 평균 얼마나 되나요?", "가족들과는 주로 어떤 대화를 나누나요?", "학교 끝나고 집에 가는 길에 들르는 단골 장소가 있나요?", "야식을 자주 먹는 편인가요? 주로 뭘 먹나요?", "혼자 있는 시간과 친구들과 있는 시간, 어느 쪽을 더 좋아하나요?", "일주일에 운동은 얼마나 하는 편인가요?", "아침에 일어나는 게 힘든 편인가요?", "지각을 자주 하는 편인가요, 아니면 항상 일찍 도착하는 편인가요?", "친구들 사이에서 어떤 역할인 것 같나요? (분위기 메이커, 리더, 경청자 등)", "게임을 즐기는 편인가요? 어떤 게임을 주로 하나요?", "요즘 유튜브에서 주로 어떤 영상을 보나요?", "배달 음식 vs 직접 요리, 어느 쪽을 더 선호하나요?", "SNS는 주로 어떤 플랫폼을 사용하나요?", "옷은 주로 어디서 구매하나요? 온라인 vs 오프라인?", "일기를 쓰거나 기록을 남기는 습관이 있나요?", "새벽까지 깨어있는 일이 자주 있나요? 주로 뭘 하나요?", "버스나 지하철에서 주로 무엇을 하며 시간을 보내나요?", "친구에게 고민 상담을 자주 하는 편인가요, 받는 편인가요?", "계획을 세워서 움직이는 타입인가요, 즉흥적인 타입인가요?", "과제나 시험 공부는 미리미리 하는 편인가요, 벼락치기 타입인가요?", "물건을 자주 잃어버리는 편인가요?", "친구들과 주로 어떤 활동을 하며 노나요?"], preferences: ["가장 좋아하는 계절과 그 이유는 무엇인가요?", "최근에 재미있게 본 영화나 드라마가 있나요? 어떤 점이 좋았나요?", "'인생 책'이라고 부를 만한 책이 있다면 소개해주세요.", "강아지 vs 고양이, 어느 쪽을 더 좋아하세요?", "가장 좋아하는 음식과 가장 싫어하는 음식은 무엇인가요?", "여행을 간다면 산과 바다 중 어디로 가고 싶으세요?", "유튜브 채널을 하나 추천해준다면요?", "세상에서 가장 맛있는 라면 끓이는 법을 설명해준다면?", "치킨은 후라이드 vs 양념, 어느 쪽인가요?", "좋아하는 음악 장르는 무엇인가요?", "영화관 vs 집에서 OTT, 영화는 어디서 보는 게 좋나요?", "새벽감성 vs 아침햇살, 어느 쪽이 더 좋은가요?", "더운 여름 vs 추운 겨울, 차라리 견딜 만한 쪽은?", "액션 영화 vs 로맨스 영화, 선호하는 장르는?", "단맛 vs 짠맛, 평소에 더 당기는 쪽은?", "아이스 아메리카노 vs 따뜻한 라떼?", "비 오는 날의 매력에 대해 어떻게 생각하나요?", "가장 좋아하는 색깔과 그 이유는?", "편의점 삼각김밥 vs 컵라면, 편의점 가면 꼭 사는 건?", "혼밥 vs 여럿이 먹기, 식사는 어떻게 하는 게 좋나요?", "도시 vs 시골, 살기에는 어디가 더 좋을까요?", "아침 일찍 vs 저녁 늦게, 생산성이 더 높은 시간대는?", "책 vs 영화, 같은 스토리라면 어떤 매체로 접하고 싶나요?", "조용한 카페 vs 북적이는 카페, 어느 분위기가 좋나요?", "창가 자리 vs 복도 자리, 교실이나 카페에서 어디 앉는 걸 선호하나요?", "익숙한 것 vs 새로운 것, 평소 어느 쪽을 더 선호하나요?", "가장 좋아하는 패스트푸드 메뉴는?", "운동화 vs 슬리퍼, 편한 신발은?", "공포 영화를 좋아하나요, 무서워하나요?", "초콜릿 vs 사탕, 단 것 중에서 고른다면?", "가장 좋아하는 숫자가 있나요?", "낮잠 vs 밤잠, 어느 쪽이 더 꿀잠인가요?", "팝송 vs 한국 노래, 평소에 더 자주 듣는 쪽은?", "피자는 도우가 얇은 게 좋나요, 두꺼운 게 좋나요?", "가장 좋아하는 간식은 무엇인가요?"], imagination: ["만약 하루 동안 투명인간이 될 수 있다면 무엇을 하고 싶나요?", "로또 1등에 당첨된다면 가장 먼저 하고 싶은 일 3가지는?", "딱 한 가지 초능력을 가질 수 있다면 어떤 능력을 원하세요?", "타임머신을 타고 과거로 돌아갈 수 있다면, 언제로 가서 무엇을 하고 싶나요?", "무인도에 딱 3가지만 가져갈 수 있다면 무엇을 가져갈 건가요?", "내가 만약 영화감독이라면, 어떤 장르의 영화를 만들고 싶나요?", "10년 전의 나에게 딱 한마디 해줄 수 있다면?", "자신을 동물에 비유한다면 어떤 동물과 닮았다고 생각하나요?", "하루 동안 다른 사람과 몸이 바뀐다면 누구와 바뀌고 싶나요?", "세상에서 모든 책을 단 한 권만 읽을 수 있다면?", "평생 한 가지 음식만 먹어야 한다면 무엇을 선택하겠어요?", "시간을 멈출 수 있다면 어떤 순간에 사용하고 싶나요?", "우주여행 vs 심해탐험, 기회가 주어진다면 어디로 가고 싶나요?", "내가 만약 가수라면 어떤 노래를 부르고 싶나요?", "평생 여름 vs 평생 겨울, 하나를 선택해야 한다면?", "백만 원 vs 백만 팔로워, 어느 쪽을 선택하시겠어요?", "하루 동안 역사 속 인물이 될 수 있다면 누가 되고 싶나요?", "나만의 식당을 연다면 어떤 컨셉으로 운영하고 싶나요?", "마법 주문을 하나 만들 수 있다면 어떤 주문을 만들겠어요?", "평생 잠을 안 자도 된다면 그 시간에 무엇을 하고 싶나요?", "세상의 모든 언어를 구사할 수 있다면 가장 먼저 누구와 대화하고 싶나요?", "내 인생을 영화로 만든다면 어떤 배우가 나를 연기하면 좋을까요?", "기억을 하나만 지울 수 있다면 어떤 기억을 지우고 싶나요?", "반대로, 절대 잊고 싶지 않은 기억은 무엇인가요?", "평생 봄 날씨로 살 수 있다면 좋을 것 같나요?", "내가 만약 웹툰 작가라면 어떤 장르의 작품을 그리고 싶나요?", "세상에서 하나의 규칙을 만들 수 있다면 어떤 규칙을 만들겠어요?", "미래의 나에게서 편지가 온다면 어떤 내용이 쓰여 있을 것 같나요?", "24시간 동안 세상 모든 사람이 내 말을 듣는다면 무슨 말을 하고 싶나요?", "평생 실내 vs 평생 실외, 하나만 선택해야 한다면?", "내가 만약 대통령이라면 가장 먼저 하고 싶은 일은?", "공룡시대 vs 미래세계, 하루 동안 여행 간다면 어디로?", "내 인생의 사운드트랙을 한 곡 고른다면?", "평생 혼자 vs 평생 누군가와 함께, 어느 쪽이 더 나을까요?", "나를 향기로 표현한다면 어떤 향일 것 같나요?"], reflection: ["고등학교 3년을 한 단어로 표현한다면?", "고등학교 생활 중 가장 기억에 남는 '순간'은 언제인가요?", "대학교에 가면 가장 기대되는 것은 무엇인가요? (학업 외적으로)", "지금까지 살면서 가장 '잘했다'고 생각하는 선택은 무엇인가요?", "반대로, '아 그때는 좀 아쉬웠다'고 생각하는 순간이 있나요?", "가장 최근에 누군가에게 '고맙다'고 말했던 경험에 대해 이야기해주세요.", "1년 뒤, 나는 어떤 모습이었으면 좋겠나요?", "오늘 면접 연습이 끝나면 무엇을 할 계획인가요?", "나에게 가장 큰 영향을 준 사람은 누구인가요?", "최근 1년 동안 가장 많이 성장했다고 느끼는 부분은?", "어렸을 때의 나와 지금의 나, 가장 달라진 점은 무엇인가요?", "나만의 특별한 장점이라고 생각하는 것은?", "개선하고 싶은 나의 습관이 있나요?", "누군가에게 받은 말 중 가장 기억에 남는 말은?", "내가 스스로에게 자주 하는 말이 있나요?", "힘들 때 나를 지탱해주는 것은 무엇인가요?", "가장 뿌듯했던 순간을 떠올려본다면?", "지금의 내가 과거의 나에게 해주고 싶은 조언은?", "올해 안에 꼭 이루고 싶은 목표가 있나요?", "나를 가장 잘 표현하는 단어 3가지는?", "친구들이 나를 어떻게 기억해주길 바라나요?", "최근에 내가 변했다고 느낀 순간이 있나요?", "나에게 '집'이란 어떤 의미인가요?", "가장 소중하게 간직하고 있는 물건은 무엇인가요?", "10년 후의 나는 어떤 일을 하고 있을까요?", "지금까지 가장 용기 있는 결정은 무엇이었나요?", "나를 행복하게 만드는 것들을 나열해본다면?", "후회하는 일이 있다면 무엇인가요?", "꼭 지키려고 노력하는 나만의 원칙이 있나요?", "내가 생각하는 '성공'의 의미는 무엇인가요?", "스스로에게 칭찬해주고 싶은 점이 있나요?", "5년 전의 나는 지금의 나를 보고 어떻게 생각할까요?", "나에게 가족이란 어떤 존재인가요?", "가장 최근에 새롭게 깨달은 것이 있나요?", "내가 정말 좋아하는 것과 잘하는 것이 일치하나요?", "인생에서 가장 중요하게 생각하는 가치는 무엇인가요?", "지금 이 순간, 나에게 필요한 것은 무엇일까요?", "최근에 감사했던 순간을 떠올려본다면?", "앞으로의 인생에서 꼭 해보고 싶은 것이 있나요?", "나를 가장 잘 아는 사람은 누구일까요?"] }
+        };
+        
         // 전역 변수
         let categories = {};
         let questions = {};
         let answers = [];
+        let presets = [];
+        let activePresetName = null;
         let currentQuestion = null;
         let isRecording = false;
         let recognition = null;
@@ -1291,8 +1347,7 @@
         let seconds = 0;
         let editingQuestionId = null;
         let koreanVoice = null; // TTS 목소리 저장 변수
-        let presets = []; // 프리셋 저장 배열
-
+        
         // 집중 모드 관련 전역 변수
         let isInFocusMode = false;
         let focusState = 'idle'; // idle -> waiting -> listening -> processing
@@ -1307,14 +1362,16 @@
 
         // 초기화
         function init() {
-            loadKoreanVoice(); // 자연스러운 한국어 목소리 로드
-            loadDataFromStorage();
-            loadPresetsFromStorage(); // 프리셋 로드
-            loadAudioRecordingState(); // 음성 녹음 상태 로드
+            loadInitialData();
+            loadAnswersFromStorage();
+            loadAudioRecordingState();
+            
             updateAllUIs();
             updateAnswerList();
+            
             initSpeechRecognition();
             createFocusModeButton();
+            loadKoreanVoice();
         }
 
         function createFocusModeButton() {
@@ -1337,38 +1394,82 @@
             setVoice();
         }
 
-        // --- 데이터 관리 ---
-        function loadDataFromStorage() {
-            const storedCategories = localStorage.getItem('interviewCategories');
-            const storedQuestions = localStorage.getItem('interviewQuestions');
-            const storedAnswers = localStorage.getItem('interviewAnswers');
+        // --- 데이터 관리 (프리셋 중심) ---
+        function loadInitialData() {
+            const savedPresets = localStorage.getItem('interviewPresets');
+            const savedActivePreset = localStorage.getItem('activePresetName');
 
-            categories = storedCategories ? JSON.parse(storedCategories) : JSON.parse(JSON.stringify(defaultData.categories));
-            questions = storedQuestions ? JSON.parse(storedQuestions) : JSON.parse(JSON.stringify(defaultData.questions));
-            answers = storedAnswers ? JSON.parse(storedAnswers) : [];
+            if (savedPresets) {
+                presets = JSON.parse(savedPresets);
+            } else {
+                // 첫 방문 시 기본 프리셋 생성
+                presets = [
+                    JSON.parse(JSON.stringify(defaultPresetInterview)),
+                    JSON.parse(JSON.stringify(defaultPresetDaily))
+                ];
+                savePresetsToStorage();
+            }
 
-            if (!storedCategories && !storedQuestions) {
-                saveCategoriesToStorage();
-                saveQuestionsToStorage();
+            // 활성 프리셋 설정
+            if (savedActivePreset && presets.some(p => p.name === savedActivePreset)) {
+                activePresetName = savedActivePreset;
+            } else if (presets.length > 0) {
+                activePresetName = presets[0].name; // 기본값으로 첫 번째 프리셋
+            }
+
+            if (activePresetName) {
+                loadPresetData(activePresetName);
             }
         }
 
-        function saveCategoriesToStorage() { localStorage.setItem('interviewCategories', JSON.stringify(categories)); }
-        function saveQuestionsToStorage() { localStorage.setItem('interviewQuestions', JSON.stringify(questions)); }
-        function saveAnswersToStorage() { localStorage.setItem('interviewAnswers', JSON.stringify(answers)); }
-        function saveDataToStorage() {
-            saveCategoriesToStorage();
-            saveQuestionsToStorage();
+        function loadPresetData(presetName) {
+            const preset = presets.find(p => p.name === presetName);
+            if (preset) {
+                activePresetName = preset.name;
+                categories = JSON.parse(JSON.stringify(preset.categories));
+                questions = JSON.parse(JSON.stringify(preset.questions));
+                localStorage.setItem('activePresetName', activePresetName);
+                updateAllUIs();
+            } else {
+                console.error(`Preset "${presetName}" not found.`);
+                // 폴백: 첫 번째 프리셋 로드
+                if (presets.length > 0) {
+                    loadPresetData(presets[0].name);
+                }
+            }
         }
 
+        function savePresetsToStorage() {
+            localStorage.setItem('interviewPresets', JSON.stringify(presets));
+        }
+
+        function updateActivePresetData() {
+            if (!activePresetName) return;
+            const presetIndex = presets.findIndex(p => p.name === activePresetName);
+            if (presetIndex !== -1) {
+                presets[presetIndex].categories = JSON.parse(JSON.stringify(categories));
+                presets[presetIndex].questions = JSON.parse(JSON.stringify(questions));
+                presets[presetIndex].timestamp = new Date().toISOString();
+                savePresetsToStorage();
+                updatePresetUI(); // 변경사항(시간, 질문 수 등) 즉시 반영
+            }
+        }
+
+        function loadAnswersFromStorage() {
+            const storedAnswers = localStorage.getItem('interviewAnswers');
+            answers = storedAnswers ? JSON.parse(storedAnswers) : [];
+        }
+        function saveAnswersToStorage() { localStorage.setItem('interviewAnswers', JSON.stringify(answers)); }
 
         // --- UI 렌더링 ---
         function updateAllUIs() {
+            updatePresetUI();
             renderCategoryManagement();
             renderQuestionAccordion();
             updateCategorySelectors();
             updateRecentAnswers();
             updateStats();
+            document.getElementById('currentPresetNameForCategory').textContent = activePresetName || '없음';
         }
 
         function renderCategoryManagement() {
@@ -1416,8 +1517,6 @@
                                 <span class="question-count-badge">${questionList.length}개</span>
                             </div>
                             <div class="accordion-header-right">
-                                <button class="btn-secondary btn-small" onclick="event.stopPropagation(); exportCategory('${id}');">내보내기</button>
-                                <button class="btn-secondary btn-small" onclick="event.stopPropagation(); triggerCategoryImport('${id}');">가져오기</button>
                                 <button class="btn-primary btn-small" onclick="event.stopPropagation(); openAddQuestionModal('${id}');">+</button>
                             </div>
                         </div>
@@ -1445,8 +1544,9 @@
             if (newQuestion) {
                 if (!questions[categoryId]) questions[categoryId] = [];
                 questions[categoryId].push(newQuestion);
-                saveQuestionsToStorage();
-                updateAllUIs();
+                updateActivePresetData();
+                renderQuestionAccordion();
+                updateStats();
                 input.value = '';
                 const header = document.querySelector(`.accordion-header[data-category-id="${categoryId}"]`);
                 if (header && !header.classList.contains('active')) toggleAccordion(header);
@@ -1482,7 +1582,7 @@
 
             if (!categoryId || !categoryName) return;
             if (!oldCategoryId && categories[categoryId]) {
-                alert('이미 존재하는 카테고리 ID입니다.');
+                showStatus('이미 존재하는 카테고리 ID입니다.', 'error');
                 return;
             }
 
@@ -1491,8 +1591,7 @@
                 categories[categoryId] = categoryName;
                 if (!questions[categoryId]) questions[categoryId] = [];
             }
-            saveCategoriesToStorage();
-            saveQuestionsToStorage();
+            updateActivePresetData();
             updateAllUIs();
             closeCategoryModal();
         }
@@ -1502,13 +1601,13 @@
             const confirmMsg = questionCount > 0
                 ? `이 카테고리에는 ${questionCount}개의 질문이 있습니다. 카테고리와 함께 모든 질문을 삭제하시겠습니까?`
                 : `'${categories[categoryId]}' 카테고리를 삭제하시겠습니까?`;
-            if (confirm(confirmMsg)) {
+            
+            showConfirm(confirmMsg, () => {
                 delete categories[categoryId];
                 delete questions[categoryId];
-                saveCategoriesToStorage();
-                saveQuestionsToStorage();
+                updateActivePresetData();
                 updateAllUIs();
-            }
+            });
         }
         
         // --- 질문 관리 ---
@@ -1517,6 +1616,7 @@
             document.getElementById('modalTitle').textContent = '질문 추가';
             document.getElementById('questionForm').reset();
             document.getElementById('questionId').value = '';
+            updateCategorySelectors(); // 최신 카테고리 목록 반영
             document.getElementById('questionCategory').value = categoryId || Object.keys(categories)[0] || '';
             document.getElementById('questionModal').classList.add('active');
         }
@@ -1544,103 +1644,27 @@
 
             if (questionId) {
                 const [oldCategoryId, index] = questionId.split('-');
-                if (oldCategoryId === categoryId) questions[oldCategoryId][parseInt(index)] = text;
-                else {
+                if (oldCategoryId === categoryId) {
+                    questions[oldCategoryId][parseInt(index)] = text;
+                } else {
                     questions[oldCategoryId].splice(parseInt(index), 1);
                     questions[categoryId].push(text);
                 }
             } else {
                 questions[categoryId].push(text);
             }
-            saveQuestionsToStorage();
+            updateActivePresetData();
             updateAllUIs();
             closeQuestionModal();
         }
 
         function deleteQuestion(categoryId, index) {
             questions[categoryId].splice(index, 1);
-            saveQuestionsToStorage();
+            updateActivePresetData();
             updateAllUIs();
         }
-
-        // --- 데이터 관리 (전체/카테고리별) ---
-        function exportDatabase() {
-            const data = { categories, questions };
-            const dataStr = JSON.stringify(data, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `interview_db_all_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function importDatabase(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data.categories && data.questions) {
-                        if (confirm('가져온 데이터로 기존 질문 데이터베이스를 완전히 덮어쓰시겠습니까?')) {
-                            categories = data.categories;
-                            questions = data.questions;
-                            saveCategoriesToStorage();
-                            saveQuestionsToStorage();
-                            updateAllUIs();
-                            alert('데이터베이스를 성공적으로 가져왔습니다.');
-                        }
-                    } else { alert('올바른 형식의 데이터베이스 파일이 아닙니다.'); }
-                } catch (error) { alert('파일을 읽는 중 오류가 발생했습니다.'); }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
         
-        function exportCategory(categoryId) {
-            const categoryQuestions = questions[categoryId] || [];
-            const dataStr = JSON.stringify(categoryQuestions, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `questions_${categoryId}_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function triggerCategoryImport(categoryId) {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = (event) => importCategory(event, categoryId);
-            input.click();
-        }
-
-        function importCategory(event, categoryId) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const importedQuestions = JSON.parse(e.target.result);
-                    if (Array.isArray(importedQuestions)) {
-                        if (!questions[categoryId]) questions[categoryId] = [];
-                        const originalCount = questions[categoryId].length;
-                        questions[categoryId] = [...new Set([...questions[categoryId], ...importedQuestions])];
-                        const addedCount = questions[categoryId].length - originalCount;
-                        saveQuestionsToStorage();
-                        updateAllUIs();
-                        alert(`'${categories[categoryId]}' 카테고리에 ${addedCount}개의 새 질문을 가져왔습니다.`);
-                    } else { alert('올바른 형식의 질문 파일(질문 목록 배열)이 아닙니다.'); }
-                } catch (error) { alert('파일을 읽는 중 오류가 발생했습니다.'); }
-            };
-            reader.readAsText(file);
-        }
-
-        // --- 음성 인식 (고급 버전) ---
+        // --- 음성 인식 ---
         function initSpeechRecognition() {
             if (window.location.protocol === 'file:') {
                 document.getElementById('setupWarning').style.display = 'block';
@@ -1690,7 +1714,6 @@
                         showStatus(errorMsg, 'error');
                         showRecognitionStatus(errorMsg, '#ef4444', '!');
                         
-                        // 핵심 변경: 치명적인 오류(권한, 마이크 없음)가 아니면 전체 녹음을 중단하지 않음
                         if (event.error === 'not-allowed' || event.error === 'audio-capture') {
                             stopRecording();
                         }
@@ -1699,7 +1722,6 @@
                     recognition.onend = () => {
                         if (isRecording) {
                             try { 
-                                // 네트워크가 온라인일 때만 재시작
                                 if (navigator.onLine) recognition.start(); 
                             }
                             catch (e) { 
@@ -1753,7 +1775,6 @@
         function startRecording() {
             isRecording = true;
             
-            // 1. 음성 인식 시작 (온라인일 때만 시도)
             if (recognition && navigator.onLine) {
                 try {
                     recognition.start();
@@ -1765,12 +1786,10 @@
                 showRecognitionStatus('오프라인 - 녹음만 진행', '#6b7280', '⌿');
             }
 
-            // 2. 음성 녹음 기능 (활성화 시 항상 시작)
             if (audioRecordingEnabled) {
                 startAudioRecording();
             }
             
-            // 3. UI 업데이트 및 타이머 시작
             if (!isInFocusMode) {
                 document.getElementById('recordBtn').textContent = '녹음 중지';
                 document.getElementById('recordBtn').classList.add('recording');
@@ -1788,22 +1807,12 @@
         }
 
         function stopRecording() {
-            if (!isRecording) return; // 중복 호출 방지
-
-            // 핵심 변경: isRecording 상태를 먼저 false로 바꿔서 onend 이벤트에서 재시작을 방지
+            if (!isRecording) return;
             isRecording = false; 
 
-            // 음성 인식 중지
-            if (recognition) {
-                recognition.stop();
-            }
+            if (recognition) recognition.stop();
+            if (audioRecordingEnabled && mediaRecorder && mediaRecorder.state !== 'inactive') stopAudioRecording();
             
-            // 음성 녹음 중지
-            if (audioRecordingEnabled && mediaRecorder && mediaRecorder.state !== 'inactive') {
-                stopAudioRecording();
-            }
-            
-            // UI 업데이트 및 타이머 중지
             if (!isInFocusMode) {
                 document.getElementById('recordBtn').textContent = '녹음 시작';
                 document.getElementById('recordBtn').classList.remove('recording');
@@ -1814,7 +1823,7 @@
             }
         }
 
-        // --- 음성 녹음 기능 관련 함수들 ---
+        // --- 음성 녹음 기능 ---
         function loadAudioRecordingState() {
             const saved = localStorage.getItem('audioRecordingEnabled');
             audioRecordingEnabled = saved === 'true';
@@ -1831,11 +1840,8 @@
         function updateAudioRecordingToggle() {
             const toggle = document.getElementById('audioRecordingToggle');
             if (toggle) {
-                if (audioRecordingEnabled) {
-                    toggle.classList.add('active');
-                } else {
-                    toggle.classList.remove('active');
-                }
+                if (audioRecordingEnabled) toggle.classList.add('active');
+                else toggle.classList.remove('active');
             }
         }
 
@@ -1843,28 +1849,20 @@
             try {
                 audioChunks = [];
                 currentAudioBlob = null;
-                
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
                 const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
                 mediaRecorder = new MediaRecorder(audioStream, { mimeType });
                 
                 mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        audioChunks.push(event.data);
-                    }
+                    if (event.data.size > 0) audioChunks.push(event.data);
                 };
                 
                 mediaRecorder.onstop = () => {
                     currentAudioBlob = new Blob(audioChunks, { type: mimeType });
                     audioChunks = [];
-                    
-                    if (audioStream) {
-                        audioStream.getTracks().forEach(track => track.stop());
-                        audioStream = null;
-                    }
+                    if (audioStream) audioStream.getTracks().forEach(track => track.stop());
+                    audioStream = null;
                 };
-                
                 mediaRecorder.start();
             } catch (error) {
                 console.error('Audio recording error:', error);
@@ -1873,9 +1871,7 @@
         }
 
         function stopAudioRecording() {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         }
 
         function blobToBase64(blob) {
@@ -1893,9 +1889,7 @@
                 const mimeString = audioData.split(',')[0].split(':')[1].split(';')[0];
                 const ab = new ArrayBuffer(byteString.length);
                 const ia = new Uint8Array(ab);
-                for (let i = 0; i < byteString.length; i++) {
-                    ia[i] = byteString.charCodeAt(i);
-                }
+                for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
                 const blob = new Blob([ab], { type: mimeString });
                 
                 const url = URL.createObjectURL(blob);
@@ -1922,17 +1916,14 @@
 
                 const audio = new Audio(audioData);
                 audio.className = 'playing-audio';
-                
                 audio.play();
                 buttonElement.textContent = '⏸️ 일시정지';
                 buttonElement.onclick = () => pauseAudio(audio, buttonElement, audioData);
-                
                 audio.onended = () => {
                     buttonElement.textContent = '▶️ 재생';
                     buttonElement.onclick = () => playAudio(audioData, buttonElement);
                     audio.remove();
                 };
-                
             } catch (error) {
                 console.error('Play error:', error);
                 showStatus('오디오 재생 중 오류가 발생했습니다.', 'error');
@@ -1958,17 +1949,27 @@
             if(clickedTab) clickedTab.classList.add('active');
             document.getElementById(tabName + '-tab').classList.add('active');
             if (tabName === 'answers') updateAnswerList();
-            updateAllUIs();
+            if (tabName === 'questions') updateAllUIs();
         }
         
         function updateCategorySelectors() {
-            const selectors = [document.getElementById('categorySelect'), document.getElementById('questionCategory')];
+            const selectors = [document.getElementById('categorySelect'), document.getElementById('questionCategory'), document.getElementById('focusCategorySelect')];
             const categoryOptions = Object.entries(categories).map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+            
             selectors.forEach(selector => {
                 if (selector) {
                     const currentVal = selector.value;
-                    selector.innerHTML = selector.id === 'categorySelect' ? '<option value="all">전체</option>' + categoryOptions : categoryOptions;
-                    selector.value = currentVal;
+                    let firstOption = '';
+                    if (selector.id === 'categorySelect' || selector.id === 'focusCategorySelect') {
+                        firstOption = '<option value="all">전체</option>';
+                    }
+                    selector.innerHTML = firstOption + categoryOptions;
+                    // 기존 값이 유효하면 유지, 아니면 기본값
+                    if (Array.from(selector.options).some(opt => opt.value === currentVal)) {
+                        selector.value = currentVal;
+                    } else {
+                        selector.value = selector.options[0]?.value || '';
+                    }
                 }
             });
         }
@@ -2026,18 +2027,15 @@
                 if (!isInFocusMode) showStatus('질문을 먼저 선택해주세요.', 'error');
                 return;
             }
-            if (!transcription && !currentAudioBlob) { // 텍스트도 없고 녹음된 오디오도 없으면 저장 안함
+            if (!transcription && !currentAudioBlob) {
                 if (!isInFocusMode) showStatus('답변 내용이 비어있습니다.', 'error');
                 return;
             }
             
             let audioData = null;
             if (audioRecordingEnabled && currentAudioBlob) {
-                try {
-                    audioData = await blobToBase64(currentAudioBlob);
-                } catch (error) {
-                    console.error('Failed to convert audio:', error);
-                }
+                try { audioData = await blobToBase64(currentAudioBlob); } 
+                catch (error) { console.error('Failed to convert audio:', error); }
             }
             
             const answer = {
@@ -2053,12 +2051,9 @@
             answers.unshift(answer);
             saveAnswersToStorage();
             updateAllUIs();
-            if (!isInFocusMode) {
-                showStatus('답변이 저장되었습니다!', 'success');
-            }
+            if (!isInFocusMode) showStatus('답변이 저장되었습니다!', 'success');
             clearTranscription();
             resetTimer();
-            
             currentAudioBlob = null;
         }
 
@@ -2066,6 +2061,7 @@
 
         function updateRecentAnswers() {
             const container = document.getElementById('recentAnswers');
+            if (!container) return;
             const recent = answers.slice(0, 5);
             if (recent.length === 0) {
                 container.innerHTML = '<div class="empty-state"><p>아직 저장된 답변이 없습니다.</p></div>';
@@ -2109,22 +2105,24 @@
         function filterAnswers() { updateAnswerList(); }
 
         function deleteAnswer(id) {
-            if (confirm('이 답변을 삭제하시겠습니까?')) {
+            showConfirm('이 답변을 삭제하시겠습니까?', () => {
                 answers = answers.filter(a => a.id !== id);
                 saveAnswersToStorage();
                 updateAnswerList();
                 updateAllUIs();
                 showStatus('답변이 삭제되었습니다.', 'info');
-            }
+            });
         }
 
         function clearAllAnswers() {
-            if (answers.length > 0 && confirm('모든 답변 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
-                answers = [];
-                saveAnswersToStorage();
-                updateAnswerList();
-                updateAllUIs();
-                showStatus('모든 답변이 삭제되었습니다.', 'info');
+            if (answers.length > 0) {
+                showConfirm('모든 답변 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.', () => {
+                    answers = [];
+                    saveAnswersToStorage();
+                    updateAnswerList();
+                    updateAllUIs();
+                    showStatus('모든 답변이 삭제되었습니다.', 'info');
+                });
             }
         }
 
@@ -2151,12 +2149,23 @@
                 try {
                     const imported = JSON.parse(e.target.result);
                     if (!Array.isArray(imported)) throw new Error("Invalid format");
-                    if (confirm('기존 답변을 덮어쓰시겠습니까? (취소하면 기존 답변에 추가됩니다)')) answers = imported;
-                    else answers = [...answers, ...imported];
-                    saveAnswersToStorage();
-                    updateAnswerList();
-                    updateAllUIs();
-                    showStatus(`${imported.length}개의 답변을 가져왔습니다.`, 'success');
+
+                    showConfirm('기존 답변을 덮어쓰시겠습니까? (취소하면 기존 답변에 추가됩니다)', 
+                        () => { // 확인
+                            answers = imported;
+                            finishImport();
+                        },
+                        () => { // 취소
+                            answers = [...answers, ...imported];
+                            finishImport();
+                        }
+                    );
+                    function finishImport() {
+                        saveAnswersToStorage();
+                        updateAnswerList();
+                        updateAllUIs();
+                        showStatus(`${imported.length}개의 답변을 가져왔습니다.`, 'success');
+                    }
                 } catch (error) { showStatus('파일을 읽는 중 오류가 발생했습니다.', 'error'); }
             };
             reader.readAsText(file);
@@ -2182,6 +2191,7 @@
 
         function showStatus(message, type) {
             const statusDiv = document.getElementById('statusMessage');
+            if(!statusDiv) return;
             statusDiv.className = `status-message status-${type}`;
             statusDiv.textContent = message;
             setTimeout(() => {
@@ -2190,25 +2200,18 @@
             }, 5000);
         }
 
-        // --- 집중 모드 관련 함수들 ---
+        // --- 집중 모드 ---
         function enterFocusMode() {
-            const container = document.getElementById('focusModeContainer');
-            container.classList.add('active');
+            document.getElementById('focusModeContainer').classList.add('active');
             isInFocusMode = true;
-
-            const mainCategorySelect = document.getElementById('categorySelect');
-            const focusCategorySelect = document.getElementById('focusCategorySelect');
-            focusCategorySelect.innerHTML = mainCategorySelect.innerHTML;
-            focusCategorySelect.value = mainCategorySelect.value;
-            
+            updateCategorySelectors(); // 포커스 모드 셀렉터 업데이트
             resetFocusMode();
             clearTranscription();
         }
 
         function exitFocusMode() {
             if (isRecording) stopRecording();
-            const container = document.getElementById('focusModeContainer');
-            container.classList.remove('active');
+            document.getElementById('focusModeContainer').classList.remove('active');
             isInFocusMode = false;
             resetFocusMode();
         }
@@ -2224,20 +2227,16 @@
 
         function speak(text, callback) {
             if (!('speechSynthesis' in window)) {
-                alert('이 브라우저는 음성 합성을 지원하지 않습니다.');
+                showStatus('이 브라우저는 음성 합성을 지원하지 않습니다.', 'error');
                 if (callback) callback();
                 return;
             }
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
-            if (koreanVoice) {
-                utterance.voice = koreanVoice;
-            }
+            if (koreanVoice) utterance.voice = koreanVoice;
             utterance.lang = 'ko-KR';
             utterance.rate = 1.0;
-            utterance.onend = () => {
-                if (callback) callback();
-            };
+            utterance.onend = () => { if (callback) callback(); };
             window.speechSynthesis.speak(utterance);
         }
 
@@ -2292,142 +2291,290 @@
         }
 
         document.getElementById('focus-circle').addEventListener('click', () => {
-            if (focusState === 'idle') {
-                startFocusModeQuestion();
-            } else if (focusState === 'listening') {
-                stopAndSaveAnswer();
-            }
+            if (focusState === 'idle') startFocusModeQuestion();
+            else if (focusState === 'listening') stopAndSaveAnswer();
         });
 
-        // --- 프리셋 관리 함수들 ---
-        function loadPresetsFromStorage() {
-            const saved = localStorage.getItem('interviewPresets');
-            presets = saved ? JSON.parse(saved) : [];
-            updatePresetUI();
-        }
-
-        function savePresetsToStorage() {
-            localStorage.setItem('interviewPresets', JSON.stringify(presets));
-            updatePresetUI();
-        }
-
+        // --- 프리셋 관리 (개선된 버전) ---
         function updatePresetUI() {
             const container = document.getElementById('presetCardsContainer');
             if (!container) return;
             
             if (presets.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>저장된 프리셋이 없습니다. 위에서 새 프리셋을 저장하세요.</p></div>';
+                container.innerHTML = '<div class="empty-state"><p>저장된 프리셋이 없습니다.</p></div>';
                 return;
             }
             
-            container.innerHTML = '<div class="preset-cards">' + presets.map((preset, index) => {
-                const date = new Date(preset.timestamp);
-                const dateStr = date.toLocaleString('ko-KR', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+            container.innerHTML = '<div class="preset-cards">' + presets.map((preset) => {
+                const dateStr = new Date(preset.timestamp).toLocaleString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                 const questionCount = Object.values(preset.questions).reduce((sum, list) => sum + list.length, 0);
                 const categoryCount = Object.keys(preset.categories).length;
+                const isActive = preset.name === activePresetName;
                 
                 return `
-                    <div class="preset-card" onclick="quickLoadPreset(${index})">
-                        <div class="preset-card-header">
-                            <div class="preset-card-title">⭐ ${preset.name}</div>
-                        </div>
-                        <div class="preset-card-meta">
-                            📚 ${questionCount}개 질문 | 📂 ${categoryCount}개 카테고리<br>
-                            🕐 ${dateStr}
+                    <div class="preset-card ${isActive ? 'active' : ''}" onclick="loadPresetData('${preset.name}')">
+                        <div>
+                            <div class="preset-card-header">
+                                <div class="preset-card-title">⭐ ${preset.name}</div>
+                            </div>
+                            <div class="preset-card-meta">
+                                📚 ${questionCount}개 질문 | 📂 ${categoryCount}개 카테고리<br>
+                                🕐 ${dateStr}
+                            </div>
                         </div>
                         <div class="preset-card-actions" onclick="event.stopPropagation()">
-                            <button class="btn-secondary btn-small" onclick="quickLoadPreset(${index})">불러오기</button>
-                            <button class="btn-secondary btn-small" onclick="quickRenamePreset(${index})">이름 변경</button>
-                            <button class="btn-danger btn-small" onclick="quickDeletePreset(${index})">삭제</button>
+                            <button class="btn-secondary btn-small" onclick="exportPreset('${preset.name}')">다운로드</button>
+                            <button class="btn-secondary btn-small" onclick="quickRenamePreset('${preset.name}')">이름 변경</button>
+                            <button class="btn-secondary btn-small" onclick="duplicatePreset('${preset.name}')">복제</button>
+                            <button class="btn-secondary btn-small" onclick="quickDeletePreset('${preset.name}')">삭제</button>
                         </div>
                     </div>
                 `;
             }).join('') + '</div>';
         }
 
-        function quickSavePreset() {
-            const nameInput = document.getElementById('newPresetName');
-            const name = nameInput.value.trim();
-            
-            if (!name) {
-                showStatus('프리셋 이름을 입력하세요.', 'error');
-                nameInput.focus();
-                return;
+        function getNewPresetName() {
+            const baseName = "새 프리셋";
+            if (!presets.some(p => p.name === baseName)) {
+                return baseName;
             }
-            
-            if (presets.some(p => p.name === name)) {
-                if (!confirm(`'${name}' 프리셋이 이미 존재합니다. 덮어쓰시겠습니까?`)) {
-                    return;
-                }
-                const existingIndex = presets.findIndex(p => p.name === name);
-                presets.splice(existingIndex, 1);
+            let num = 2;
+            let newName = `${baseName} (${num})`;
+            while (presets.some(p => p.name === newName)) {
+                num++;
+                newName = `${baseName} (${num})`;
             }
-            
+            return newName;
+        }
+
+        function addBlankPreset() {
+            const newName = getNewPresetName();
             const preset = {
-                name: name,
-                categories: JSON.parse(JSON.stringify(categories)),
-                questions: JSON.parse(JSON.stringify(questions)),
+                name: newName,
+                categories: {},
+                questions: {},
                 timestamp: new Date().toISOString()
             };
-            
             presets.push(preset);
             savePresetsToStorage();
-            nameInput.value = '';
-            showStatus(`프리셋 '${name}'이(가) 저장되었습니다!`, 'success');
+            updatePresetUI();
+            showStatus(`'${newName}' 프리셋이 추가되었습니다.`, 'success');
         }
 
-        function quickLoadPreset(index) {
-            const preset = presets[index];
-            
-            if (!confirm(`'${preset.name}' 프리셋을 불러오시겠습니까?\n\n현재 질문 데이터베이스가 교체됩니다.\n(답변 기록은 유지됩니다)`)) {
+        function quickDeletePreset(presetName) {
+            if (presets.length <= 1) {
+                showStatus('마지막 프리셋은 삭제할 수 없습니다.', 'error');
                 return;
             }
-            
-            categories = JSON.parse(JSON.stringify(preset.categories));
-            questions = JSON.parse(JSON.stringify(preset.questions));
-            
-            saveDataToStorage();
-            updateCategorySelectors();
-            updateAllUIs();
-            showStatus(`프리셋 '${preset.name}'을(를) 불러왔습니다!`, 'success');
+            showConfirm(`'${presetName}' 프리셋을 삭제하시겠습니까?`, () => {
+                presets = presets.filter(p => p.name !== presetName);
+                if (activePresetName === presetName) {
+                    activePresetName = presets[0].name; // 다른 프리셋으로 활성화 전환
+                    loadPresetData(activePresetName);
+                }
+                savePresetsToStorage();
+                updateAllUIs();
+                showStatus('프리셋이 삭제되었습니다.', 'info');
+            });
         }
 
-        function quickDeletePreset(index) {
-            const preset = presets[index];
-            
-            if (!confirm(`'${preset.name}' 프리셋을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
+        function quickRenamePreset(oldName) {
+            showPrompt('새 프리셋 이름을 입력하세요:', oldName, (newName) => {
+                newName = newName.trim();
+                if (!newName) return;
+                
+                if (presets.some(p => p.name === newName && p.name !== oldName)) {
+                    showStatus('이미 존재하는 프리셋 이름입니다.', 'error');
+                    return;
+                }
+                
+                const preset = presets.find(p => p.name === oldName);
+                if (preset) {
+                    preset.name = newName;
+                    if (activePresetName === oldName) {
+                        activePresetName = newName;
+                        localStorage.setItem('activePresetName', activePresetName);
+                    }
+                    savePresetsToStorage();
+                    updateAllUIs();
+                    showStatus('프리셋 이름이 변경되었습니다.', 'success');
+                }
+            });
+        }
+        
+        function getDuplicatePresetName(originalName) {
+            const baseName = `${originalName} 사본`;
+            if (!presets.some(p => p.name === baseName)) {
+                return baseName;
+            }
+            let num = 2;
+            let newName = `${baseName} (${num})`;
+            while (presets.some(p => p.name === newName)) {
+                num++;
+                newName = `${baseName} (${num})`;
+            }
+            return newName;
+        }
+
+        function duplicatePreset(presetNameToDuplicate) {
+            const originalPreset = presets.find(p => p.name === presetNameToDuplicate);
+            if (!originalPreset) {
+                showStatus('복제할 프리셋을 찾을 수 없습니다.', 'error');
                 return;
             }
-            
-            presets.splice(index, 1);
+
+            const newPreset = JSON.parse(JSON.stringify(originalPreset)); // Deep copy
+            newPreset.name = getDuplicatePresetName(originalPreset.name);
+            newPreset.timestamp = new Date().toISOString();
+
+            presets.push(newPreset);
             savePresetsToStorage();
-            showStatus('프리셋이 삭제되었습니다.', 'info');
+            updatePresetUI();
+            showStatus(`'${originalPreset.name}' 프리셋이 '${newPreset.name}'(으)로 복제되었습니다.`, 'success');
         }
 
-        function quickRenamePreset(index) {
-            const preset = presets[index];
-            const newName = prompt('새 이름을 입력하세요:', preset.name);
-            
-            if (!newName || newName.trim() === '') return;
-            
-            if (presets.some((p, i) => i !== index && p.name === newName.trim())) {
-                alert('이미 존재하는 프리셋 이름입니다.');
-                return;
+        function exportPreset(presetName) {
+            const preset = presets.find(p => p.name === presetName);
+            if (!preset) return;
+
+            const dataStr = JSON.stringify(preset, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${preset.name}_preset.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importSinglePreset(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedPreset = JSON.parse(e.target.result);
+                    if (!importedPreset.name || importedPreset.categories === undefined || importedPreset.questions === undefined) {
+                        throw new Error("Invalid preset format");
+                    }
+
+                    if (presets.some(p => p.name === importedPreset.name)) {
+                        showConfirm(`'${importedPreset.name}' 프리셋이 이미 존재합니다. 덮어쓰시겠습니까?`, () => {
+                            const index = presets.findIndex(p => p.name === importedPreset.name);
+                            presets[index] = importedPreset;
+                            finishImport(importedPreset.name);
+                        });
+                    } else {
+                        presets.push(importedPreset);
+                        finishImport(importedPreset.name);
+                    }
+                } catch (error) {
+                    showStatus('올바른 프리셋 파일이 아닙니다.', 'error');
+                }
+            };
+            function finishImport(name) {
+                savePresetsToStorage();
+                updatePresetUI();
+                showStatus(`프리셋 '${name}'을(를) 가져왔습니다.`, 'success');
             }
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function exportAllPresets() {
+            const dataStr = JSON.stringify(presets, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `all_presets_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importAllPresets(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedPresets = JSON.parse(e.target.result);
+                    if (!Array.isArray(importedPresets)) throw new Error("Invalid format");
+                    
+                    showConfirm('가져온 데이터로 모든 프리셋을 교체하시겠습니까?', () => {
+                        presets = importedPresets;
+                        activePresetName = presets.length > 0 ? presets[0].name : null;
+                        savePresetsToStorage();
+                        loadPresetData(activePresetName);
+                        showStatus('모든 프리셋을 성공적으로 가져왔습니다.', 'success');
+                    });
+                } catch (error) { showStatus('파일을 읽는 중 오류가 발생했습니다.', 'error'); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+        
+        // --- 커스텀 모달 함수 ---
+        function showConfirm(message, onConfirm, onCancel = () => {}) {
+            document.getElementById('confirmModalMessage').innerHTML = message.replace(/\n/g, '<br>');
+            const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+            const cancelBtn = document.getElementById('confirmModalCancelBtn');
             
-            preset.name = newName.trim();
-            savePresetsToStorage();
-            showStatus('프리셋 이름이 변경되었습니다.', 'success');
+            const confirmHandler = () => {
+                hideConfirmModal();
+                onConfirm();
+            };
+            const cancelHandler = () => {
+                hideConfirmModal();
+                onCancel();
+            };
+
+            confirmBtn.onclick = confirmHandler;
+            cancelBtn.onclick = cancelHandler;
+            
+            document.getElementById('confirmModal').classList.add('active');
+            confirmBtn.focus();
+        }
+
+        function hideConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+        }
+
+        function showPrompt(message, defaultValue, onConfirm) {
+            document.getElementById('promptModalMessage').textContent = message;
+            const input = document.getElementById('promptModalInput');
+            input.value = defaultValue;
+            
+            const confirmBtn = document.getElementById('promptModalConfirmBtn');
+            const confirmHandler = () => {
+                hidePromptModal();
+                onConfirm(input.value);
+            };
+            
+            confirmBtn.onclick = confirmHandler;
+            input.onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmHandler();
+                }
+            };
+            
+            document.getElementById('promptModal').classList.add('active');
+            input.focus();
+            input.select();
+        }
+
+        function hidePromptModal() {
+            document.getElementById('promptModal').classList.remove('active');
         }
 
         document.addEventListener('DOMContentLoaded', init);
-        document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); }));
+        document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', (e) => { 
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        }));
+
     </script>
 </body>
 </html>
