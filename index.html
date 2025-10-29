@@ -296,6 +296,92 @@
             margin-top: 4px;
         }
 
+        /* 프리셋 카드 스타일 */
+        .preset-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .preset-card {
+            background: white;
+            border: 2px solid #e8e5e0;
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .preset-card:hover {
+            border-color: #c97f66;
+            box-shadow: 0 4px 12px rgba(201, 127, 102, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .preset-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .preset-card-title {
+            font-weight: 600;
+            font-size: 1.05em;
+            color: #1a1a1a;
+            word-break: break-word;
+            flex: 1;
+        }
+
+        .preset-card-meta {
+            font-size: 0.85em;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+
+        .preset-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .preset-save-section {
+            background: #f5f3f0;
+            padding: 16px;
+            border-radius: 8px;
+            border: 2px dashed #d8d4cf;
+            margin-bottom: 20px;
+        }
+
+        .preset-save-section h4 {
+            font-size: 1em;
+            color: #374151;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .preset-input-group {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .preset-input-group input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #d8d4cf;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+
+        .preset-input-group input:focus {
+            outline: none;
+            border-color: #c97f66;
+            box-shadow: 0 0 0 3px rgba(201, 127, 102, 0.1);
+        }
+
 
         .timer {
             background: #f5e6d3;
@@ -978,19 +1064,21 @@
             <div class="management-section">
                 <div class="management-header">
                     <h3>⭐ 프리셋 관리</h3>
-                    <p>현재 질문 데이터베이스를 프리셋으로 저장하고 불러올 수 있습니다. 프리셋은 브라우저에 저장됩니다.</p>
+                    <p>현재 질문 데이터베이스를 프리셋으로 저장하고 불러올 수 있습니다. 저장된 프리셋을 클릭하면 바로 불러옵니다.</p>
                 </div>
-                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;">
-                    <select id="presetSelect" style="flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #d8d4cf; border-radius: 6px; font-size: 0.95em;">
-                        <option value="">프리셋 선택...</option>
-                    </select>
-                    <button class="btn-primary btn-small" onclick="loadPreset()">불러오기</button>
-                    <button class="btn-secondary btn-small" onclick="saveAsPreset()">현재 DB를 프리셋으로 저장</button>
-                    <button class="btn-secondary btn-small" onclick="renamePreset()">이름 변경</button>
-                    <button class="btn-danger btn-small" onclick="deletePreset()">삭제</button>
+                
+                <!-- 새 프리셋 저장 섹션 -->
+                <div class="preset-save-section">
+                    <h4>💾 현재 질문 DB를 새 프리셋으로 저장</h4>
+                    <div class="preset-input-group">
+                        <input type="text" id="newPresetName" placeholder="프리셋 이름을 입력하세요 (예: 면접 기본 질문)" onkeypress="if(event.key==='Enter') quickSavePreset()">
+                        <button class="btn-primary" onclick="quickSavePreset()">저장</button>
+                    </div>
                 </div>
-                <div id="presetList" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">
-                    <!-- 프리셋 목록이 여기에 표시됩니다 -->
+
+                <!-- 저장된 프리셋 목록 -->
+                <div id="presetCardsContainer">
+                    <!-- 프리셋 카드들이 여기에 표시됩니다 -->
                 </div>
             </div>
             
@@ -1035,7 +1123,7 @@
                 <div class="toggle-container">
                     <div style="flex: 1;">
                         <div class="toggle-label">🎙️ 음성 녹음 기능</div>
-                        <div class="toggle-description">활성화하면 답변 시 음성이 녹음되어 다운로드할 수 있습니다.</div>
+                        <div class="toggle-description">활성화하면 답변 시 음성이 녹음되어 다운로드할 수 있습니다. 오프라인에서도 녹음 가능합니다. (음성 인식은 인터넷 필요)</div>
                     </div>
                     <div class="toggle-switch" id="audioRecordingToggle" onclick="toggleAudioRecording()">
                         <div class="toggle-slider"></div>
@@ -1796,6 +1884,49 @@
         }
     }
 
+    function playAudio(audioData, buttonElement) {
+        try {
+            // 기존에 재생 중인 오디오가 있다면 중지
+            const existingAudio = document.querySelector('audio.playing-audio');
+            if (existingAudio) {
+                existingAudio.pause();
+                existingAudio.remove();
+            }
+
+            // 오디오 요소 생성
+            const audio = new Audio(audioData);
+            audio.className = 'playing-audio';
+            
+            // 재생 시작
+            audio.play();
+            buttonElement.textContent = '⏸️ 일시정지';
+            buttonElement.onclick = () => pauseAudio(audio, buttonElement, audioData);
+            
+            // 재생 완료 시 버튼 텍스트 원래대로
+            audio.onended = () => {
+                buttonElement.textContent = '▶️ 재생';
+                buttonElement.onclick = () => playAudio(audioData, buttonElement);
+                audio.remove();
+            };
+            
+        } catch (error) {
+            console.error('Play error:', error);
+            showStatus('오디오 재생 중 오류가 발생했습니다.', 'error');
+        }
+    }
+
+    function pauseAudio(audio, buttonElement, audioData) {
+        audio.pause();
+        buttonElement.textContent = '▶️ 재생';
+        buttonElement.onclick = () => resumeAudio(audio, buttonElement, audioData);
+    }
+
+    function resumeAudio(audio, buttonElement, audioData) {
+        audio.play();
+        buttonElement.textContent = '⏸️ 일시정지';
+        buttonElement.onclick = () => pauseAudio(audio, buttonElement, audioData);
+    }
+
     // --- 기타 유틸리티 함수 ---
     function switchTab(tabName) {
         document.querySelectorAll('.tab.active, .tab-content.active').forEach(el => el.classList.remove('active'));
@@ -1934,9 +2065,10 @@
             container.innerHTML = '<div class="empty-state"><p>저장된 답변이 없습니다.</p></div>';
             return;
         }
-        container.innerHTML = filtered.map(answer => {
-            const audioButton = answer.audioData 
-                ? `<button class="btn-secondary btn-small" onclick="downloadAudio('${answer.audioData.replace(/'/g, "\\'")}', '${answer.timestamp}')">🎙️ 녹음 다운로드</button>` 
+        container.innerHTML = filtered.map((answer, index) => {
+            const audioButtons = answer.audioData 
+                ? `<button class="btn-secondary btn-small" id="playBtn_${index}" onclick="playAudio('${answer.audioData.replace(/'/g, "\\'")}', this)">▶️ 재생</button>
+                   <button class="btn-secondary btn-small" onclick="downloadAudio('${answer.audioData.replace(/'/g, "\\'")}', '${answer.timestamp}')">💾 다운로드</button>` 
                 : '';
             return `
             <div class="answer-card">
@@ -1944,7 +2076,7 @@
                 <div class="answer-meta">카테고리: ${answer.category} | 시간: ${Math.floor(answer.duration / 60)}분 ${answer.duration % 60}초 | ${new Date(answer.timestamp).toLocaleString('ko-KR')}</div>
                 <div class="answer-text">${answer.answer.replace(/\n/g, '<br>')}</div>
                 <div class="answer-actions">
-                    ${audioButton}
+                    ${audioButtons}
                     <button class="btn-danger btn-small" onclick="deleteAnswer(${answer.id})">삭제</button>
                 </div>
             </div>
@@ -2158,29 +2290,124 @@
     }
 
     function updatePresetUI() {
-        const select = document.getElementById('presetSelect');
-        const list = document.getElementById('presetList');
+        const container = document.getElementById('presetCardsContainer');
+        if (!container) return;
         
-        // 셀렉트 박스 업데이트
-        select.innerHTML = '<option value="">프리셋 선택...</option>';
-        presets.forEach((preset, index) => {
-            const option = document.createElement('option');
-            option.value = index;
-            option.textContent = preset.name;
-            select.appendChild(option);
-        });
-        
-        // 프리셋 목록 표시
         if (presets.length === 0) {
-            list.innerHTML = '<div style="color: #6b7280; font-size: 0.9em;">저장된 프리셋이 없습니다.</div>';
-        } else {
-            list.innerHTML = presets.map((preset, index) => 
-                `<span style="background: #e8e5e0; padding: 6px 12px; border-radius: 6px; font-size: 0.9em; cursor: pointer;" 
-                       onclick="document.getElementById('presetSelect').value='${index}'">${preset.name}</span>`
-            ).join('');
+            container.innerHTML = '<div class="empty-state"><p>저장된 프리셋이 없습니다. 위에서 새 프리셋을 저장하세요.</p></div>';
+            return;
         }
+        
+        container.innerHTML = '<div class="preset-cards">' + presets.map((preset, index) => {
+            const date = new Date(preset.timestamp);
+            const dateStr = date.toLocaleString('ko-KR', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            const questionCount = Object.values(preset.questions).reduce((sum, list) => sum + list.length, 0);
+            const categoryCount = Object.keys(preset.categories).length;
+            
+            return `
+                <div class="preset-card" onclick="quickLoadPreset(${index})">
+                    <div class="preset-card-header">
+                        <div class="preset-card-title">⭐ ${preset.name}</div>
+                    </div>
+                    <div class="preset-card-meta">
+                        📚 ${questionCount}개 질문 | 📂 ${categoryCount}개 카테고리<br>
+                        🕐 ${dateStr}
+                    </div>
+                    <div class="preset-card-actions" onclick="event.stopPropagation()">
+                        <button class="btn-secondary btn-small" onclick="quickLoadPreset(${index})">불러오기</button>
+                        <button class="btn-secondary btn-small" onclick="quickRenamePreset(${index})">이름 변경</button>
+                        <button class="btn-danger btn-small" onclick="quickDeletePreset(${index})">삭제</button>
+                    </div>
+                </div>
+            `;
+        }).join('') + '</div>';
     }
 
+    function quickSavePreset() {
+        const nameInput = document.getElementById('newPresetName');
+        const name = nameInput.value.trim();
+        
+        if (!name) {
+            showStatus('프리셋 이름을 입력하세요.', 'error');
+            nameInput.focus();
+            return;
+        }
+        
+        // 중복 이름 체크
+        if (presets.some(p => p.name === name)) {
+            if (!confirm(`'${name}' 프리셋이 이미 존재합니다. 덮어쓰시겠습니까?`)) {
+                return;
+            }
+            // 기존 프리셋 삭제
+            const existingIndex = presets.findIndex(p => p.name === name);
+            presets.splice(existingIndex, 1);
+        }
+        
+        const preset = {
+            name: name,
+            categories: JSON.parse(JSON.stringify(categories)),
+            questions: JSON.parse(JSON.stringify(questions)),
+            timestamp: new Date().toISOString()
+        };
+        
+        presets.push(preset);
+        savePresetsToStorage();
+        nameInput.value = '';
+        showStatus(`프리셋 '${name}'이(가) 저장되었습니다!`, 'success');
+    }
+
+    function quickLoadPreset(index) {
+        const preset = presets[index];
+        
+        if (!confirm(`'${preset.name}' 프리셋을 불러오시겠습니까?\n\n현재 질문 데이터베이스가 교체됩니다.\n(답변 기록은 유지됩니다)`)) {
+            return;
+        }
+        
+        categories = JSON.parse(JSON.stringify(preset.categories));
+        questions = JSON.parse(JSON.stringify(preset.questions));
+        
+        saveDataToStorage();
+        updateCategorySelectors();
+        updateAllUIs();
+        showStatus(`프리셋 '${preset.name}'을(를) 불러왔습니다!`, 'success');
+    }
+
+    function quickDeletePreset(index) {
+        const preset = presets[index];
+        
+        if (!confirm(`'${preset.name}' 프리셋을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
+            return;
+        }
+        
+        presets.splice(index, 1);
+        savePresetsToStorage();
+        showStatus('프리셋이 삭제되었습니다.', 'info');
+    }
+
+    function quickRenamePreset(index) {
+        const preset = presets[index];
+        const newName = prompt('새 이름을 입력하세요:', preset.name);
+        
+        if (!newName || newName.trim() === '') return;
+        
+        // 중복 이름 체크 (자기 자신 제외)
+        if (presets.some((p, i) => i !== index && p.name === newName.trim())) {
+            alert('이미 존재하는 프리셋 이름입니다.');
+            return;
+        }
+        
+        preset.name = newName.trim();
+        savePresetsToStorage();
+        showStatus('프리셋 이름이 변경되었습니다.', 'success');
+    }
+
+    // 이전 함수들은 하위 호환성을 위해 유지
     function saveAsPreset() {
         const name = prompt('프리셋 이름을 입력하세요:');
         if (!name || name.trim() === '') return;
@@ -2195,67 +2422,6 @@
         presets.push(preset);
         savePresetsToStorage();
         showStatus(`프리셋 '${name}'이(가) 저장되었습니다.`, 'success');
-    }
-
-    function loadPreset() {
-        const select = document.getElementById('presetSelect');
-        const index = select.value;
-        
-        if (index === '') {
-            showStatus('프리셋을 선택해주세요.', 'error');
-            return;
-        }
-        
-        if (!confirm('현재 데이터베이스를 선택한 프리셋으로 교체하시겠습니까? (현재 데이터는 손실됩니다)')) {
-            return;
-        }
-        
-        const preset = presets[index];
-        categories = JSON.parse(JSON.stringify(preset.categories));
-        questions = JSON.parse(JSON.stringify(preset.questions));
-        
-        saveDataToStorage();
-        updateCategorySelectors();
-        updateAllUIs();
-        showStatus(`프리셋 '${preset.name}'을(를) 불러왔습니다.`, 'success');
-    }
-
-    function deletePreset() {
-        const select = document.getElementById('presetSelect');
-        const index = select.value;
-        
-        if (index === '') {
-            showStatus('삭제할 프리셋을 선택해주세요.', 'error');
-            return;
-        }
-        
-        const preset = presets[index];
-        if (!confirm(`프리셋 '${preset.name}'을(를) 삭제하시겠습니까?`)) {
-            return;
-        }
-        
-        presets.splice(index, 1);
-        savePresetsToStorage();
-        showStatus('프리셋이 삭제되었습니다.', 'info');
-    }
-
-    function renamePreset() {
-        const select = document.getElementById('presetSelect');
-        const index = select.value;
-        
-        if (index === '') {
-            showStatus('이름을 변경할 프리셋을 선택해주세요.', 'error');
-            return;
-        }
-        
-        const preset = presets[index];
-        const newName = prompt('새 이름을 입력하세요:', preset.name);
-        
-        if (!newName || newName.trim() === '') return;
-        
-        preset.name = newName.trim();
-        savePresetsToStorage();
-        showStatus('프리셋 이름이 변경되었습니다.', 'success');
     }
 
     document.addEventListener('DOMContentLoaded', init);
