@@ -1288,6 +1288,31 @@
             </form>
         </div>
     </div>
+
+    <!-- 답변 편집 모달 -->
+    <div id="answerEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>답변 수정</h3>
+                <button class="close-btn" onclick="closeAnswerEditModal()">×</button>
+            </div>
+            <form id="answerEditForm" onsubmit="saveAnswerEdit(event)">
+                <div class="form-group">
+                    <label>질문</label>
+                    <div id="editAnswerQuestion" style="padding: 10px; background: #f5f3f0; border-radius: 6px; color: #6b7280;"></div>
+                </div>
+                <div class="form-group">
+                    <label>답변 내용*</label>
+                    <textarea id="editAnswerText" required placeholder="답변을 입력하세요..." style="min-height: 200px;"></textarea>
+                </div>
+                <input type="hidden" id="editAnswerId">
+                <div class="controls">
+                    <button type="submit" class="btn-success">저장</button>
+                    <button type="button" class="btn-secondary" onclick="closeAnswerEditModal()">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
     
     <!-- 집중 모드 컨테이너 -->
     <div id="focusModeContainer">
@@ -2298,6 +2323,7 @@
                     <div class="answer-text">${answer.answer.replace(/\n/g, '<br>')}</div>
                     <div class="answer-actions">
                         ${audioButtons}
+                        <button class="btn-secondary btn-small" onclick="openAnswerEditModal(${answer.id})">수정</button>
                         <button class="btn-danger btn-small" onclick="deleteAnswer(${answer.id})">삭제</button>
                     </div>
                 </div>
@@ -2344,6 +2370,41 @@
                     updateAllUIs();
                     showStatus('모든 답변이 삭제되었습니다.', 'info');
                 });
+            }
+        }
+
+        function openAnswerEditModal(answerId) {
+            const answer = answers.find(a => a.id === answerId);
+            if (!answer) return;
+            
+            document.getElementById('editAnswerQuestion').textContent = answer.question;
+            document.getElementById('editAnswerText').value = answer.answer;
+            document.getElementById('editAnswerId').value = answerId;
+            document.getElementById('answerEditModal').classList.add('active');
+        }
+
+        function closeAnswerEditModal() {
+            document.getElementById('answerEditModal').classList.remove('active');
+        }
+
+        function saveAnswerEdit(event) {
+            event.preventDefault();
+            const answerId = parseInt(document.getElementById('editAnswerId').value);
+            const newAnswerText = document.getElementById('editAnswerText').value.trim();
+            
+            if (!newAnswerText) {
+                showStatus('답변 내용을 입력해주세요.', 'error');
+                return;
+            }
+            
+            const answer = answers.find(a => a.id === answerId);
+            if (answer) {
+                answer.answer = newAnswerText;
+                saveAnswersToStorage();
+                updateAnswerList();
+                updateAllUIs();
+                closeAnswerEditModal();
+                showStatus('답변이 수정되었습니다.', 'success');
             }
         }
 
