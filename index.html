@@ -1255,7 +1255,7 @@
                         <input type="radio" name="speechMode" value="mobile" onchange="setSpeechMode('mobile')" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;">
                         <div style="flex: 1;">
                             <div style="font-weight: 600; color: #1a1a1a; margin-bottom: 4px;">모바일 호환</div>
-                            <div style="font-size: 0.9em; color: #6b7280;">모바일 브라우저에 최적화되어 중복 문제를 방지합니다. 자동 모드에서 문제가 있을 때 사용하세요.</div>
+                            <div style="font-size: 0.9em; color: #6b7280;">중복을 완전히 차단합니다. 자동 모드에서도 문제가 있을 때 사용하세요.</div>
                         </div>
                     </label>
                 </div>
@@ -1966,6 +1966,13 @@
             });
         }
 
+        function isMobileDevice() {
+            // Check if device is mobile based on user agent and touch capability
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+            return mobileRegex.test(userAgent) || (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+        }
+
         function initSpeechRecognition() {
             if (window.location.protocol === 'file:') {
                 document.getElementById('setupWarning').style.display = 'block';
@@ -1975,7 +1982,12 @@
                 try {
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     recognition = new SpeechRecognition();
-                    recognition.continuous = true;
+                    
+                    // CRITICAL FIX: Set continuous to false on mobile to prevent duplicates
+                    // This is a known Android Chrome bug where continuous=true causes duplicate results
+                    const isOnMobile = isMobileDevice();
+                    recognition.continuous = !isOnMobile;
+                    
                     recognition.interimResults = true;
                     recognition.lang = 'ko-KR';
                     recognition.maxAlternatives = 1;
@@ -1994,15 +2006,22 @@
 
                     recognition.onresult = (event) => {
                         if (speechMode === 'auto') {
-                            // AUTO MODE (RECOMMENDED): Uses event.resultIndex to avoid duplicates
-                            // This is the proper way to handle Web Speech API results
-                            // event.resultIndex tells us exactly where new/changed results start
+                            // AUTO MODE (RECOMMENDED): Uses event.resultIndex with confidence filtering
+                            // Added confidence check to filter out Android duplicate bug (confidence=0)
                             let interimTranscript = '';
                             
                             for (let i = event.resultIndex; i < event.results.length; i++) {
-                                const transcript = event.results[i][0].transcript;
-                                if (event.results[i].isFinal) {
-                                    finalTranscript += transcript + ' ';
+                                const result = event.results[i];
+                                const alternative = result[0];
+                                const transcript = alternative.transcript;
+                                
+                                // Filter out low-confidence duplicates (Android bug)
+                                // On Android, duplicates often have confidence = 0
+                                if (result.isFinal) {
+                                    // Only add if confidence is not exactly 0 (which indicates duplicate on Android)
+                                    if (alternative.confidence === undefined || alternative.confidence > 0) {
+                                        finalTranscript += transcript + ' ';
+                                    }
                                 } else {
                                     interimTranscript += transcript;
                                 }
@@ -2010,54 +2029,61 @@
                             
                             document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
                             if (interimTranscript) {
-                                showRecognitionStatus(`🔊 인식 중...`, '#3b82f6', '●');
+                                showRecognitionStatus(`인식 중...`, '#3b82f6', '●');
                             }
                             
                         } else if (speechMode === 'pc') {
-                            // PC MODE (LEGACY): Original implementation
+                            // PC MODE (LEGACY): Original implementation with confidence filtering
                             // Iterates from lastFinalResultIndex through all results
-                            // Works well on desktop Chrome but may duplicate on some mobile browsers
+                            // Added confidence check to prevent mobile duplicates
                             let interimTranscript = '';
                             
                             for (let i = lastFinalResultIndex; i < event.results.length; i++) {
-                                const transcript = event.results[i][0].transcript;
-                                if (event.results[i].isFinal) {
-                                    finalTranscript += transcript + ' ';
-                                    lastFinalResultIndex = i + 1;
-                                } else {
-                                    interimTranscript += transcript;
-                                }
-                            }
-                            
-                            document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
-                            if (interimTranscript) {
-                                showRecognitionStatus(`🔊 인식 중...`, '#3b82f6', '●');
-                            }
-                            
-                        } else if (speechMode === 'mobile') {
-                            // MOBILE MODE (IMPROVED): Uses event.resultIndex like auto mode but with mobile-optimized handling
-                            // This prevents duplicates on mobile browsers by processing only new/changed results
-                            // event.resultIndex indicates where new or modified results start
-                            let interimTranscript = '';
-                            
-                            // Process only from resultIndex onwards to avoid reprocessing old results
-                            for (let i = event.resultIndex; i < event.results.length; i++) {
-                                const transcript = event.results[i][0].transcript;
-                                if (event.results[i].isFinal) {
-                                    // Add final results only if they're new (haven't been processed yet)
-                                    if (i >= lastFinalResultIndex) {
+                                const result = event.results[i];
+                                const alternative = result[0];
+                                const transcript = alternative.transcript;
+                                
+                                if (result.isFinal) {
+                                    // Filter out low-confidence duplicates (Android bug workaround)
+                                    if (alternative.confidence === undefined || alternative.confidence > 0) {
                                         finalTranscript += transcript + ' ';
                                         lastFinalResultIndex = i + 1;
                                     }
                                 } else {
-                                    // Accumulate interim results that haven't been finalized yet
                                     interimTranscript += transcript;
                                 }
                             }
                             
                             document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
                             if (interimTranscript) {
-                                showRecognitionStatus(`🔊 인식 중...`, '#3b82f6', '●');
+                                showRecognitionStatus(`인식 중...`, '#3b82f6', '●');
+                            }
+                            
+                        } else if (speechMode === 'mobile') {
+                            // MOBILE MODE (AGGRESSIVE): Only processes the last result with confidence filter
+                            // Prevents duplicates by ignoring all previous results
+                            // Enhanced with confidence checking for Android duplicate bug
+                            let interimTranscript = '';
+                            const lastResultIndex = event.results.length - 1;
+                            const lastResult = event.results[lastResultIndex];
+                            const alternative = lastResult[0];
+                            const transcript = alternative.transcript;
+                            
+                            if (lastResult.isFinal) {
+                                // Only add final results that we haven't seen before
+                                // AND that have valid confidence (not 0, which indicates duplicate on Android)
+                                if (lastResultIndex >= lastFinalResultIndex) {
+                                    if (alternative.confidence === undefined || alternative.confidence > 0) {
+                                        finalTranscript += transcript + ' ';
+                                        lastFinalResultIndex = lastResultIndex + 1;
+                                    }
+                                }
+                                document.getElementById('transcriptionText').value = finalTranscript;
+                            } else {
+                                // Show interim results temporarily without accumulating
+                                interimTranscript = transcript;
+                                document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
+                                showRecognitionStatus(`인식 중...`, '#3b82f6', '●');
                             }
                         }
                     };
@@ -2081,11 +2107,19 @@
                     recognition.onend = () => {
                         if (isRecording) {
                             try { 
-                                if (navigator.onLine) recognition.start(); 
+                                if (navigator.onLine) {
+                                    // On mobile with continuous=false, we need to restart after each phrase
+                                    // Add a small delay to prevent rapid restarts
+                                    setTimeout(() => {
+                                        if (isRecording) {
+                                            recognition.start();
+                                        }
+                                    }, 100);
+                                }
                             }
                             catch (e) { 
                                 stopRecording(); 
-                                showRecognitionStatus('⚠️ 재시작 실패', '#ef4444', '!'); 
+                                showRecognitionStatus('재시작 실패', '#ef4444', '!'); 
                             }
                         } else {
                             showRecognitionStatus('음성 인식 대기 중', '#6b7280', '○');
@@ -2101,11 +2135,11 @@
                     updateSpeechModeUI();
                 } catch (e) {
                     showStatus('음성 인식을 초기화할 수 없습니다.', 'error');
-                    showRecognitionStatus('❌ 초기화 실패', '#ef4444', '!');
+                    showRecognitionStatus('초기화 실패', '#ef4444', '!');
                 }
             } else {
                 showStatus('이 브라우저는 음성 인식을 지원하지 않습니다.', 'error');
-                showRecognitionStatus('❌ 브라우저 미지원', '#ef4444', '!');
+                showRecognitionStatus('브라우저 미지원', '#ef4444', '!');
             }
         }
 
@@ -2149,7 +2183,7 @@
                     showStatus('음성 인식은 시작되지 않았지만, 녹음은 계속됩니다.', 'info');
                 }
             } else if (!navigator.onLine) {
-                showRecognitionStatus('오프라인 - 녹음만 진행', '#6b7280', '⌿');
+                showRecognitionStatus('오프라인 - 녹음만 진행', '#6b7280', '○');
             }
 
             if (audioRecordingEnabled) {
