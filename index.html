@@ -50,6 +50,13 @@
             border-bottom: 1px solid #d8d4cf;
             padding: 0 40px;
             gap: 2px;
+            overflow-x: auto;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
         }
 
         .tab {
@@ -1066,7 +1073,7 @@
             <button class="tab active" onclick="switchTab('practice')">연습</button>
             <button class="tab" onclick="switchTab('questions')">질문 데이터베이스</button>
             <button class="tab" onclick="switchTab('answers')">답변 기록</button>
-            <button class="tab" onclick="switchTab('stats')">통계</button>
+            <button class="tab" onclick="switchTab('settings')">설정</button>
         </div>
 
         <!-- 연습 탭 -->
@@ -1214,25 +1221,88 @@
             </div>
         </div>
 
-        <!-- 통계 탭 -->
-        <div id="stats-tab" class="tab-content">
-            <h2 style="margin-bottom: 24px; font-size: 1.5em;">연습 통계</h2>
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-value" id="statsQuestionsCount">0</div>
-                    <div class="stat-label">현재 프리셋 질문 수</div>
+        <!-- 설정 탭 -->
+        <div id="settings-tab" class="tab-content">
+            <h2 style="margin-bottom: 24px; font-size: 1.5em;">설정</h2>
+            
+            <!-- 음성 인식 설정 -->
+            <div style="background: white; padding: 24px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #e8e5e0;">
+                <h3 style="font-size: 1.15em; margin-bottom: 16px; color: #1a1a1a; display: flex; align-items: center; gap: 8px;">
+                    <span>🎤</span> 음성 인식 모드
+                </h3>
+                <p style="color: #6b7280; margin-bottom: 20px; font-size: 0.95em; line-height: 1.6;">
+                    음성을 텍스트로 변환하는 방식을 선택합니다. 모바일에서 중복 문제가 발생하면 다른 모드를 시도해보세요.
+                </p>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <label style="display: flex; align-items: center; padding: 16px; border: 2px solid #e8e5e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;" id="autoModeLabel">
+                        <input type="radio" name="speechMode" value="auto" onchange="setSpeechMode('auto')" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #1a1a1a; margin-bottom: 4px;">자동 (권장)</div>
+                            <div style="font-size: 0.9em; color: #6b7280;">표준 API를 사용하여 PC와 모바일 모두에서 정확하게 작동합니다.</div>
+                        </div>
+                    </label>
+                    
+                    <label style="display: flex; align-items: center; padding: 16px; border: 2px solid #e8e5e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;" id="pcModeLabel">
+                        <input type="radio" name="speechMode" value="pc" onchange="setSpeechMode('pc')" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #1a1a1a; margin-bottom: 4px;">PC 호환</div>
+                            <div style="font-size: 0.9em; color: #6b7280;">데스크톱 환경에 최적화된 레거시 방식입니다.</div>
+                        </div>
+                    </label>
+                    
+                    <label style="display: flex; align-items: center; padding: 16px; border: 2px solid #e8e5e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;" id="mobileModeLabel">
+                        <input type="radio" name="speechMode" value="mobile" onchange="setSpeechMode('mobile')" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #1a1a1a; margin-bottom: 4px;">모바일 호환</div>
+                            <div style="font-size: 0.9em; color: #6b7280;">중복을 완전히 차단합니다. 자동 모드에서도 문제가 있을 때 사용하세요.</div>
+                        </div>
+                    </label>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statsCategoryCount">0</div>
-                    <div class="stat-label">현재 프리셋 카테고리 수</div>
+            </div>
+            
+            <!-- 음성 녹음 설정 -->
+            <div style="background: white; padding: 24px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #e8e5e0;">
+                <h3 style="font-size: 1.15em; margin-bottom: 16px; color: #1a1a1a; display: flex; align-items: center; gap: 8px;">
+                    <span>🎙️</span> 음성 녹음 기능
+                </h3>
+                <p style="color: #6b7280; margin-bottom: 20px; font-size: 0.95em; line-height: 1.6;">
+                    답변을 음성 파일로 녹음하여 저장합니다. 나중에 재생하여 자신의 답변을 들어볼 수 있습니다.
+                </p>
+                
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f9fafb; border-radius: 8px;">
+                    <div>
+                        <div style="font-weight: 600; color: #1a1a1a; margin-bottom: 4px;">음성 녹음 활성화</div>
+                        <div style="font-size: 0.9em; color: #6b7280;">최대 50개의 음성 파일이 브라우저에 저장됩니다.</div>
+                    </div>
+                    <div class="toggle-switch" id="audioRecordingToggleSettings" onclick="toggleAudioRecording()" style="margin: 0;">
+                        <div class="toggle-slider"></div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statsAnswersCount">0</div>
-                    <div class="stat-label">저장된 답변</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statsPracticeTime">0</div>
-                    <div class="stat-label">총 연습 시간 (분)</div>
+            </div>
+            
+            <!-- 통계 정보 -->
+            <div style="background: white; padding: 24px; border-radius: 8px; border: 1px solid #e8e5e0;">
+                <h3 style="font-size: 1.15em; margin-bottom: 16px; color: #1a1a1a; display: flex; align-items: center; gap: 8px;">
+                    <span>📊</span> 연습 통계
+                </h3>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statsQuestionsCount">0</div>
+                        <div class="stat-label">현재 프리셋 질문 수</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statsCategoryCount">0</div>
+                        <div class="stat-label">현재 프리셋 카테고리 수</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statsAnswersCount">0</div>
+                        <div class="stat-label">저장된 답변</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statsPracticeTime">0</div>
+                        <div class="stat-label">총 연습 시간 (분)</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1392,6 +1462,7 @@
         let currentQuestion = null;
         let isRecording = false;
         let recognition = null;
+        let speechMode = 'auto'; // 'auto', 'pc', or 'mobile' - speech recognition mode
         let timerInterval = null;
         let seconds = 0;
         let editingQuestionId = null;
@@ -1515,6 +1586,7 @@
             loadInitialData();
             loadAnswersFromStorage();
             loadAudioRecordingState();
+            loadSpeechMode();
             
             updateAllUIs();
             updateAnswerList();
@@ -1829,6 +1901,71 @@
         }
         
         // --- 음성 인식 ---
+        function loadSpeechMode() {
+            const savedMode = localStorage.getItem('speechMode');
+            if (savedMode === 'auto' || savedMode === 'pc' || savedMode === 'mobile') {
+                speechMode = savedMode;
+            } else {
+                speechMode = 'auto'; // Default to auto mode
+            }
+            updateSpeechModeUI();
+        }
+
+        function setSpeechMode(mode) {
+            if (mode !== 'auto' && mode !== 'pc' && mode !== 'mobile') return;
+            
+            speechMode = mode;
+            localStorage.setItem('speechMode', mode);
+            updateSpeechModeUI();
+            
+            // 현재 녹음 중이면 재시작
+            if (isRecording) {
+                const wasRecording = true;
+                stopRecording();
+                setTimeout(() => {
+                    if (wasRecording) startRecording();
+                }, 100);
+            } else if (recognition) {
+                // 녹음 중이 아니어도 recognition 객체는 재생성
+                initSpeechRecognition();
+            }
+            
+            const modeNames = {
+                'auto': '자동 (권장)',
+                'pc': 'PC 호환',
+                'mobile': '모바일 호환'
+            };
+            showStatus(`음성 인식 모드: ${modeNames[mode]}`, 'success');
+        }
+
+        function updateSpeechModeUI() {
+            // Update radio buttons in settings tab
+            const radioButtons = document.querySelectorAll('input[name="speechMode"]');
+            radioButtons.forEach(radio => {
+                radio.checked = (radio.value === speechMode);
+            });
+            
+            // Update label styling in settings tab
+            const labels = {
+                'auto': document.getElementById('autoModeLabel'),
+                'pc': document.getElementById('pcModeLabel'),
+                'mobile': document.getElementById('mobileModeLabel')
+            };
+            
+            Object.keys(labels).forEach(mode => {
+                const label = labels[mode];
+                if (label) {
+                    if (mode === speechMode) {
+                        label.style.borderColor = '#c97f66';
+                        label.style.backgroundColor = '#fef8f6';
+                    } else {
+                        label.style.borderColor = '#e8e5e0';
+                        label.style.backgroundColor = 'white';
+                    }
+                }
+            });
+        }
+
         function initSpeechRecognition() {
             if (window.location.protocol === 'file:') {
                 document.getElementById('setupWarning').style.display = 'block';
@@ -1842,29 +1979,84 @@
                     recognition.interimResults = true;
                     recognition.lang = 'ko-KR';
                     recognition.maxAlternatives = 1;
+                    
                     let finalTranscript = '';
-                    let lastFinalResultIndex = 0;
+                    let lastFinalResultIndex = 0; // Only used for PC mode
 
                     recognition.onstart = () => {
                         finalTranscript = document.getElementById('transcriptionText').value;
-                        if (finalTranscript.length > 0 && !finalTranscript.endsWith(' ')) finalTranscript += ' ';
+                        if (finalTranscript.length > 0 && !finalTranscript.endsWith(' ')) {
+                            finalTranscript += ' ';
+                        }
                         lastFinalResultIndex = 0;
                         showRecognitionStatus('음성 인식 활성화 - 말씀해주세요', '#7c9473', '●');
                     };
 
                     recognition.onresult = (event) => {
-                        let interimTranscript = '';
-                        for (let i = lastFinalResultIndex; i < event.results.length; i++) {
-                            const transcript = event.results[i][0].transcript;
-                            if (event.results[i].isFinal) {
-                                finalTranscript += transcript + ' ';
-                                lastFinalResultIndex = i + 1;
+                        if (speechMode === 'auto') {
+                            // AUTO MODE (RECOMMENDED): Uses event.resultIndex to avoid duplicates
+                            // This is the proper way to handle Web Speech API results
+                            // event.resultIndex tells us exactly where new/changed results start
+                            let interimTranscript = '';
+                            
+                            for (let i = event.resultIndex; i < event.results.length; i++) {
+                                const transcript = event.results[i][0].transcript;
+                                if (event.results[i].isFinal) {
+                                    finalTranscript += transcript + ' ';
+                                } else {
+                                    interimTranscript += transcript;
+                                }
+                            }
+                            
+                            document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
+                            if (interimTranscript) {
+                                showRecognitionStatus(`🔊 인식 중...`, '#3b82f6', '●');
+                            }
+                            
+                        } else if (speechMode === 'pc') {
+                            // PC MODE (LEGACY): Original implementation
+                            // Iterates from lastFinalResultIndex through all results
+                            // Works well on desktop Chrome but may duplicate on some mobile browsers
+                            let interimTranscript = '';
+                            
+                            for (let i = lastFinalResultIndex; i < event.results.length; i++) {
+                                const transcript = event.results[i][0].transcript;
+                                if (event.results[i].isFinal) {
+                                    finalTranscript += transcript + ' ';
+                                    lastFinalResultIndex = i + 1;
+                                } else {
+                                    interimTranscript += transcript;
+                                }
+                            }
+                            
+                            document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
+                            if (interimTranscript) {
+                                showRecognitionStatus(`🔊 인식 중...`, '#3b82f6', '●');
+                            }
+                            
+                        } else if (speechMode === 'mobile') {
+                            // MOBILE MODE (AGGRESSIVE): Only processes the last result
+                            // Prevents duplicates by ignoring all previous results
+                            // Use this if Auto mode still shows duplicates on your device
+                            let interimTranscript = '';
+                            const lastResultIndex = event.results.length - 1;
+                            const lastResult = event.results[lastResultIndex];
+                            const transcript = lastResult[0].transcript;
+                            
+                            if (lastResult.isFinal) {
+                                // Only add final results that we haven't seen before
+                                if (lastResultIndex >= lastFinalResultIndex) {
+                                    finalTranscript += transcript + ' ';
+                                    lastFinalResultIndex = lastResultIndex + 1;
+                                }
+                                document.getElementById('transcriptionText').value = finalTranscript;
                             } else {
-                                interimTranscript += transcript;
+                                // Show interim results temporarily without accumulating
+                                interimTranscript = transcript;
+                                document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
+                                showRecognitionStatus(`🔊 인식 중...`, '#3b82f6', '●');
                             }
                         }
-                        document.getElementById('transcriptionText').value = finalTranscript + interimTranscript;
-                        if (interimTranscript) showRecognitionStatus(`🔊 인식 중...`, '#3b82f6', '●');
                     };
 
                     recognition.onerror = (event) => {
@@ -1896,7 +2088,14 @@
                             showRecognitionStatus('음성 인식 대기 중', '#6b7280', '○');
                         }
                     };
-                    showRecognitionStatus('음성 인식 준비 완료', '#10b981', '✓');
+                    
+                    const modeLabels = {
+                        'auto': '자동 모드 (권장)',
+                        'pc': 'PC 호환 모드',
+                        'mobile': '모바일 호환 모드'
+                    };
+                    showRecognitionStatus(`음성 인식 준비 완료 - ${modeLabels[speechMode]}`, '#10b981', '✓');
+                    updateSpeechModeUI();
                 } catch (e) {
                     showStatus('음성 인식을 초기화할 수 없습니다.', 'error');
                     showRecognitionStatus('❌ 초기화 실패', '#ef4444', '!');
@@ -2003,15 +2202,21 @@
 
         function updateAudioRecordingToggle() {
             const toggle = document.getElementById('audioRecordingToggle');
+            const toggleSettings = document.getElementById('audioRecordingToggleSettings');
             const notice = document.getElementById('audioStorageNotice');
-            if (toggle) {
-                if (audioRecordingEnabled) {
-                    toggle.classList.add('active');
-                    if (notice) notice.style.display = 'block';
-                } else {
-                    toggle.classList.remove('active');
-                    if (notice) notice.style.display = 'none';
+            
+            [toggle, toggleSettings].forEach(t => {
+                if (t) {
+                    if (audioRecordingEnabled) {
+                        t.classList.add('active');
+                    } else {
+                        t.classList.remove('active');
+                    }
                 }
+            });
+            
+            if (notice) {
+                notice.style.display = audioRecordingEnabled ? 'block' : 'none';
             }
         }
 
