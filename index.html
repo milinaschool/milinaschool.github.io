@@ -1279,6 +1279,20 @@
                         <div class="toggle-slider"></div>
                     </div>
                 </div>
+                
+                <!-- Mobile Compatibility Warning -->
+                <div id="mobileAudioWarning" style="background: #fef3c7; border: 1px solid #fde68a; padding: 14px; border-radius: 6px; margin-top: 16px; display: none;">
+                    <div style="display: flex; gap: 10px;">
+                        <span style="font-size: 1.2em;">⚠️</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">모바일 기기 제한사항</div>
+                            <div style="font-size: 0.9em; color: #92400e; line-height: 1.5;">
+                                안드로이드 크롬에서는 MediaRecorder와 음성 인식 API가 마이크를 동시에 사용할 수 없는 브라우저 제한이 있습니다. 
+                                모바일에서는 음성 인식만 작동하며, 음성 녹음 기능은 자동으로 비활성화됩니다.
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- 통계 정보 -->
@@ -1594,6 +1608,7 @@
             initSpeechRecognition();
             createFocusModeButton();
             loadKoreanVoice();
+            checkMobileAudioCompatibility();
         }
 
         function createFocusModeButton() {
@@ -1614,6 +1629,15 @@
                 window.speechSynthesis.onvoiceschanged = setVoice;
             }
             setVoice();
+        }
+
+        function checkMobileAudioCompatibility() {
+            const isOnMobile = isMobileDevice();
+            const warningElement = document.getElementById('mobileAudioWarning');
+            
+            if (warningElement && isOnMobile) {
+                warningElement.style.display = 'block';
+            }
         }
 
         // --- 데이터 관리 (프리셋 중심) ---
@@ -2259,6 +2283,16 @@
 
         async function startAudioRecording() {
             try {
+                // CRITICAL: On Android Chrome, MediaRecorder blocks Speech Recognition API
+                // This is a known browser limitation that cannot be worked around
+                // Reference: https://stackoverflow.com/questions/74166961/
+                const isOnMobile = isMobileDevice();
+                if (isOnMobile && recognition) {
+                    console.warn('Audio recording is disabled on mobile devices to prevent microphone conflicts with speech recognition');
+                    showStatus('모바일에서는 음성 인식과의 충돌을 방지하기 위해 음성 녹음이 비활성화됩니다.', 'info');
+                    return;
+                }
+                
                 audioChunks = [];
                 currentAudioBlob = null;
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
